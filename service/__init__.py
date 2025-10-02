@@ -1,0 +1,1 @@
+from .language_service import get_all_languages
