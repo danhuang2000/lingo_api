@@ -1,15 +1,15 @@
-import io
-import os
 import logging
+from dotenv import load_dotenv
 from fastapi import FastAPI, Depends
 from contextlib import asynccontextmanager
 from fastapi.responses import JSONResponse
-import torchaudio
 
 from orm import init_db, start_db, get_session
 from orm.user_orm import UserOrm
 from entity import User, Language, LanguageLevel, LanguageLevelHistory
 
+
+load_dotenv()
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -58,28 +58,60 @@ def get_languages(session=Depends(get_session)):
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
-import whisper
-import tempfile
+from service import SpeechToText
 
-model = whisper.load_model("small")  # You can use "tiny", "base", "small", "medium", "large"
 
 @app.post("/audio/stream")
 async def upload_audio_stream(file: UploadFile = File(...)):
-    if file.content_type not in ["audio/x-m4a", "audio/m4a", "audio/mpeg", "audio/wav"]:
-        logger.info(f"Invalid audio format: {file.content_type}")
-        raise HTTPException(status_code=400, detail="Invalid audio format")
-
     try:
-        file_bytes = await file.read()
-
-        with tempfile.NamedTemporaryFile(suffix=".m4a") as tmp:
-            tmp.write(file_bytes)
-            tmp.flush()
-
-            result = model.transcribe(tmp.name)
-            logger.debug(f"STT: {result['text']}")
-
-        return JSONResponse(content={"text": result["text"]})
-
+        text = await SpeechToText.speech_to_text(file)
+        return JSONResponse(content={"transcription": text})
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+        logger.error(f"Error processing audio: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+    
+
+from fastapi.staticfiles import StaticFiles
+app.mount("/audio", StaticFiles(directory="audio_files"), name="static")
+
+@app.post("/qna")
+async def ask_question(file: UploadFile = File(...)):
+    try:
+        stt_text = await SpeechToText.speech_to_text(file=file)
+        import base64
+        from typing import Iterable
+        from piper.voice import AudioChunk
+        from service import OllamaClient, QnAAgent, TextToSpeech
+        from entity import Language
+        import numpy as np
+        import wave
+
+        client = OllamaClient()
+        english = Language(code="en", name="English")
+        chinese = Language(code="zh", name="Chinese")
+        agent = QnAAgent(client, primary_language=english, secondary_language=chinese)
+        answer = agent.ask_ai(stt_text)
+        logger.info(f"AI Answer: {answer}")
+        audio = TextToSpeech.synthesize(text=answer, language_code="en", gender=TextToSpeech.GENDER_FEMALE)
+        file_path = "audio_files/output.wav"
+        with wave.open(file_path, "wb") as wf:
+            set_header = True
+            for chunk in audio:
+                if set_header:
+                    wf.setnchannels(chunk.sample_channels)  # mono
+                    wf.setsampwidth(chunk.sample_width)  # 2 bytes = 16 bits
+                    wf.setframerate(chunk.sample_rate)  # sample rate from model config
+                    set_header = False
+                wf.writeframes(chunk.audio_int16_bytes)
+        phonemes_arrays = TextToSpeech.phonemize(text=answer, language_code="en", gender=TextToSpeech.GENDER_FEMALE)
+        phonemes = [item for sublist in phonemes_arrays for item in sublist]
+        file_url = "http://192.168.1.170:8000/audio/output.wav"
+        return JSONResponse(content={"text": answer, "audio": file_url, "phoneme": phonemes})
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Error processing QnA: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")    
+    

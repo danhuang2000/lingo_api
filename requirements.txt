@@ -1,6 +1,13 @@
+python-dotenv
 fastapi
 uvicorn
 sqlmodel
 python-multipart
 openai-whisper
-
+piper-tts
+glin-profanity
+langchain
+langchain-ollama
+langchain-community
+langgraph
+pytest
