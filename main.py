@@ -1,12 +1,16 @@
 import logging
+import io
 from dotenv import load_dotenv
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, File, UploadFile, HTTPException
 from contextlib import asynccontextmanager
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
+from requests_toolbelt.multipart import MultipartEncoder
+
 
 from orm import init_db, start_db, get_session
 from orm.user_orm import UserOrm
 from entity import User, Language, LanguageLevel, LanguageLevelHistory
+from service import SpeechToText
 
 
 load_dotenv()
@@ -80,38 +84,56 @@ app.mount("/audio", StaticFiles(directory="audio_files"), name="static")
 async def ask_question(file: UploadFile = File(...)):
     try:
         stt_text = await SpeechToText.speech_to_text(file=file)
-        import base64
-        from typing import Iterable
-        from piper.voice import AudioChunk
-        from service import OllamaClient, QnAAgent, TextToSpeech
+        from service import OllamaClient, OpenAiClient, StubClient, QnAAgent, TextToSpeech
         from entity import Language
-        import numpy as np
-        import wave
 
-        client = OllamaClient()
+        # client = OpenAiClient()
+        # client = OllamaClient()
+        client = StubClient()
         english = Language(code="en", name="English")
         chinese = Language(code="zh", name="Chinese")
         agent = QnAAgent(client, primary_language=english, secondary_language=chinese)
         answer = agent.ask_ai(stt_text)
         logger.info(f"AI Answer: {answer}")
-        audio = TextToSpeech.synthesize(text=answer, language_code="en", gender=TextToSpeech.GENDER_FEMALE)
-        file_path = "audio_files/output.wav"
-        with wave.open(file_path, "wb") as wf:
-            set_header = True
-            for chunk in audio:
-                if set_header:
-                    wf.setnchannels(chunk.sample_channels)  # mono
-                    wf.setsampwidth(chunk.sample_width)  # 2 bytes = 16 bits
-                    wf.setframerate(chunk.sample_rate)  # sample rate from model config
-                    set_header = False
-                wf.writeframes(chunk.audio_int16_bytes)
-        phonemes_arrays = TextToSpeech.phonemize(text=answer, language_code="en", gender=TextToSpeech.GENDER_FEMALE)
-        phonemes = [item for sublist in phonemes_arrays for item in sublist]
-        file_url = "http://192.168.1.170:8000/audio/output.wav"
-        return JSONResponse(content={"text": answer, "audio": file_url, "phoneme": phonemes})
+
+        # Synthesize audio and phonemes
+        audios = TextToSpeech.synthesize(
+            text=answer,
+            lang_code_1="en",
+            lang_code_2="zh",
+            gender=TextToSpeech.GENDER_FEMALE
+        )
+
+        # Prepare multipart fields
+        fields = {
+            "answer": (None, answer)
+        }
+        for idx, item in enumerate(audios):
+            language_code = item["lang"]
+            idx_lang = f"{idx}_{language_code}"
+            # Audio as bytes
+            audio_bytes = b"".join([chunk.audio_int16_bytes for chunk in item["audio"]])
+            fields[f"audio_{idx_lang}"] = (f"audio_{idx_lang}.wav", io.BytesIO(audio_bytes), "audio/wav")
+            # Phoneme as JSON string
+            import json
+            fields[f"phoneme_{idx_lang}"] = (None, json.dumps(item["phoneme"]), "application/json")
+
+            logger.debug(f"audio multipart {idx_lang}")
+
+        m = MultipartEncoder(fields=fields)
+
+        def multipart_stream():
+            chunk_size = 8192
+            while True:
+                chunk = m.read(chunk_size)
+                if not chunk:
+                    break
+                yield chunk
+
+        return StreamingResponse(multipart_stream(), media_type=m.content_type)
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         logger.error(f"Error processing QnA: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")    
-    
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+        

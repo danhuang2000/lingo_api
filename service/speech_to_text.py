@@ -12,16 +12,23 @@ class SpeechToText:
 
     @staticmethod
     async def speech_to_text(file: UploadFile) -> str:
-        if file.content_type not in ["audio/x-m4a", "audio/m4a", "audio/mpeg", "audio/wav"]:
+        extension = ''
+        if file.content_type ==  "audio/m4a":
+            extension = ".m4a"
+        elif file.content_type == "audio/wav":
+            extension = ".wav"
+        else:
             logger.info(f"Invalid audio format: {file.content_type}")
             raise ValueError("Invalid audio format")
 
         file_bytes = await file.read()
 
-        with tempfile.NamedTemporaryFile(suffix=".m4a") as tmp:
+        with tempfile.NamedTemporaryFile(suffix=extension) as tmp:
+            logger.debug(f"save audio to {tmp.name}")
             tmp.write(file_bytes)
             tmp.flush()
 
+            logger.debug("Transcribing audio")
             result = SpeechToText.__model.transcribe(tmp.name)
             logger.debug(f"STT: {result['text']}")
 
