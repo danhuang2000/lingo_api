@@ -112,8 +112,7 @@ async def ask_question(file: UploadFile = File(...)):
             language_code = item["lang"]
             idx_lang = f"{idx}_{language_code}"
             # Audio as bytes
-            audio_bytes = b"".join([chunk.audio_int16_bytes for chunk in item["audio"]])
-            fields[f"audio_{idx_lang}"] = (f"audio_{idx_lang}.wav", io.BytesIO(audio_bytes), "audio/wav")
+            fields[f"audio_{idx_lang}"] = (f"audio_{idx_lang}.wav", item["audio"], "audio/wav")
             # Phoneme as JSON string
             import json
             fields[f"phoneme_{idx_lang}"] = (None, json.dumps(item["phoneme"]), "application/json")
