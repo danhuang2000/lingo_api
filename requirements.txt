@@ -3,6 +3,7 @@ fastapi
 uvicorn
 sqlmodel
 python-multipart
+openai
 openai-whisper
 piper-tts
 glin-profanity
