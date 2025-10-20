@@ -1,10 +1,11 @@
-import logging
+
 import tempfile
 import whisper
 from fastapi import UploadFile
 
+from utils import get_app_logger
 
-logger = logging.getLogger(__name__)
+logger = get_app_logger(__name__)
 
 
 class SpeechToText:

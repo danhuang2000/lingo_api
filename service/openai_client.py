@@ -1,11 +1,11 @@
 import os
-import logging
 from langchain.schema import BaseMessage
-from .ai_client import AiClient
 import openai
 
-logger = logging.getLogger(__name__)
+from utils import get_app_logger
+from .ai_client import AiClient
 
+logger = get_app_logger(__name__)
 
 class OpenAiClient(AiClient):
     def __init__(self):

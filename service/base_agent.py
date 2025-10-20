@@ -1,8 +1,8 @@
-import logging
+from utils import get_app_logger
 from langchain.schema import SystemMessage, HumanMessage, AIMessage
 from .ai_client import AiClient
 
-logger = logging.getLogger(__name__)
+logger = get_app_logger(__name__)
 
 
 class BaseAgent:

@@ -1,11 +1,12 @@
 import io
 import os
 import re
-import logging
 import wave
 from piper.voice import PiperVoice
 
-logger = logging.getLogger(__name__)
+from utils import get_app_logger
+
+logger = get_app_logger(__name__)
 
 
 class TextToSpeech:

@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from requests_toolbelt.multipart import MultipartEncoder
 
 
+from utils import get_app_logger
 from orm import init_db, start_db, get_session
 from orm.user_orm import UserOrm
 from entity import User, Language, LanguageLevel, LanguageLevelHistory
@@ -16,12 +17,12 @@ from service import SpeechToText
 load_dotenv()
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-logger = logging.getLogger(__name__)
+logger = get_app_logger(__name__)
 
 
 @asynccontextmanager
@@ -86,6 +87,7 @@ async def ask_question(file: UploadFile = File(...)):
         stt_text = await SpeechToText.speech_to_text(file=file)
         from service import OllamaClient, OpenAiClient, StubClient, QnAAgent, TextToSpeech
         from entity import Language
+        import json
 
         # client = OpenAiClient()
         # client = OllamaClient()
@@ -111,12 +113,8 @@ async def ask_question(file: UploadFile = File(...)):
         for idx, item in enumerate(audios):
             language_code = item["lang"]
             idx_lang = f"{idx}_{language_code}"
-            # Audio as bytes
-            fields[f"audio_{idx_lang}"] = (f"audio_{idx_lang}.wav", item["audio"], "audio/wav")
-            # Phoneme as JSON string
-            import json
             fields[f"phoneme_{idx_lang}"] = (None, json.dumps(item["phoneme"]), "application/json")
-
+            fields[f"audio_{idx_lang}"] = (f"audio_{idx_lang}.wav", item["audio"], "audio/wav")
             logger.debug(f"audio multipart {idx_lang}")
 
         m = MultipartEncoder(fields=fields)
