@@ -30,7 +30,7 @@ class TextToSpeech:
 
     @staticmethod
     def synthesize(text: str, lang_code_1: str, lang_code_2: str, gender: int):
-        logging.debug(f"synthesizing {text}")
+        logger.debug(f"synthesizing {text}")
         # Regex to find segments like <es>...</es>
         pattern = re.compile(rf"<{lang_code_2}>(.*?)</{lang_code_2}>", re.DOTALL)
         segments = []

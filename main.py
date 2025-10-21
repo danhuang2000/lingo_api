@@ -81,8 +81,75 @@ async def upload_audio_stream(file: UploadFile = File(...)):
 from fastapi.staticfiles import StaticFiles
 app.mount("/audio", StaticFiles(directory="audio_files"), name="static")
 
+
+from pydantic import BaseModel
+
+class LangWithText(BaseModel):
+    lang: str
+    text: str
+
+class DualLangContent(BaseModel):
+    content1: LangWithText
+    content2: LangWithText
+
+@app.post("/question")
+async def ask_qustion(content: DualLangContent):
+    try:
+        from service import OllamaClient, OpenAiClient, StubClient, QnAAgent, TextToSpeech
+        from entity import Language
+        import json
+
+        logger.info(f"lang={content.content1.lang} text={content.content1.text}")
+        logger.info(f"lang={content.content2.lang} text={content.content2.text}")
+
+        # client = OpenAiClient()
+        # client = OllamaClient()
+        client = StubClient()
+        english = Language(code="en", name="English")
+        chinese = Language(code="zh", name="Chinese")
+        agent = QnAAgent(client, primary_language=english, secondary_language=chinese)
+        answer = agent.ask_ai(content.content1.text)
+        logger.info(f"AI Answer: {answer}")
+
+        # Synthesize audio and phonemes
+        audios = TextToSpeech.synthesize(
+            text=answer,
+            lang_code_1="en",
+            lang_code_2="zh",
+            gender=TextToSpeech.GENDER_FEMALE
+        )
+
+        # Prepare multipart fields
+        fields = {
+            "answer": (None, answer)
+        }
+        for idx, item in enumerate(audios):
+            language_code = item["lang"]
+            idx_lang = f"{idx}_{language_code}"
+            fields[f"phoneme_{idx_lang}"] = (None, json.dumps(item["phoneme"]), "application/json")
+            fields[f"audio_{idx_lang}"] = (f"audio_{idx_lang}.wav", item["audio"], "audio/wav")
+            logger.debug(f"audio multipart {idx_lang}")
+
+        m = MultipartEncoder(fields=fields)
+
+        def multipart_stream():
+            chunk_size = 8192
+            while True:
+                chunk = m.read(chunk_size)
+                if not chunk:
+                    break
+                yield chunk
+
+        return StreamingResponse(multipart_stream(), media_type=m.content_type)
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Error processing QnA: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
 @app.post("/qna")
-async def ask_question(file: UploadFile = File(...)):
+async def ask_qna(file: UploadFile = File(...)):
     try:
         stt_text = await SpeechToText.speech_to_text(file=file)
         from service import OllamaClient, OpenAiClient, StubClient, QnAAgent, TextToSpeech
