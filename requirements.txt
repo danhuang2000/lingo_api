@@ -5,6 +5,8 @@ sqlmodel
 python-multipart
 openai
 openai-whisper
+phonemizer
+pypinyin
 piper-tts
 glin-profanity
 langchain
