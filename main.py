@@ -126,7 +126,7 @@ async def ask_qustion(content: DualLangContent):
         for idx, item in enumerate(audios):
             language_code = item["lang"]
             idx_lang = f"{idx}_{language_code}"
-            fields[f"phoneme_{idx_lang}"] = (None, json.dumps(item["phoneme"]), "application/json")
+            fields[f"phoneme_{idx_lang}"] = (None, json.dumps(item["phonemes"]), "application/json")
             fields[f"audio_{idx_lang}"] = (f"audio_{idx_lang}.wav", item["audio"], "audio/wav")
             logger.debug(f"audio multipart {idx_lang}")
 
@@ -180,7 +180,7 @@ async def ask_qna(file: UploadFile = File(...)):
         for idx, item in enumerate(audios):
             language_code = item["lang"]
             idx_lang = f"{idx}_{language_code}"
-            fields[f"phoneme_{idx_lang}"] = (None, json.dumps(item["phoneme"]), "application/json")
+            fields[f"phoneme_{idx_lang}"] = (None, json.dumps(item["phonemes"]), "application/json")
             fields[f"audio_{idx_lang}"] = (f"audio_{idx_lang}.wav", item["audio"], "audio/wav")
             logger.debug(f"audio multipart {idx_lang}")
 
