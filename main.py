@@ -80,7 +80,7 @@ async def upload_audio_stream(file: UploadFile = File(...)):
 
 from fastapi.staticfiles import StaticFiles
 app.mount("/audio", StaticFiles(directory="audio_files"), name="static")
-
+app.mount("/image", StaticFiles(directory="image_files"), name="static")
 
 from pydantic import BaseModel
 
