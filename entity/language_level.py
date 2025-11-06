@@ -6,6 +6,15 @@ from .language_level_history import LanguageLevelHistory
 
 
 class LanguageLevel(SQLModel, table=True):
+    """
+    Language level entity representing a user's proficiency in a specific language.
+    ACTFL levels are used: 
+        Novice - Low, Mid, High 
+        Intermediate - Low, Mid, High
+        Advanced - Low, Mid, High 
+        Superior
+        Distinguished
+    """
     # __tablename__ = 'language_level'
     user_id: Optional[int] = Field(default=None, foreign_key="user.id", primary_key=True)
     language_id: Optional[int] = Field(default=None, foreign_key="language.id", primary_key=True)
