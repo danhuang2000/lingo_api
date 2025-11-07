@@ -2,45 +2,31 @@ from typing import Optional
 from datetime import datetime, timezone
 from sqlmodel import Field, SQLModel, Relationship
 
-from .language_level_history import LanguageLevelHistory
-
 
 class LanguageLevel(SQLModel, table=True):
     """
     Language level entity representing a user's proficiency in a specific language.
     ACTFL levels are used: 
-        Novice - Low, Mid, High 
-        Intermediate - Low, Mid, High
-        Advanced - Low, Mid, High 
-        Superior
-        Distinguished
+    Novice          
+        Low	    Communicates minimally with isolated words and memorized phrases. Often relies on gestures and repetition.
+        Mid	    Can produce simple phrases and respond to direct questions on familiar topics. Still limited to memorized language.
+        High	Can handle short social interactions using learned phrases. May attempt to create language but with frequent errors.
+    Intermediate
+        Low	    Can express basic needs and preferences. Speech is halting and relies on memorized chunks.
+        Mid	    Can ask and answer questions, handle simple transactions, and describe in present tense. Speech is more fluid but limited to familiar contexts.
+        High	Can participate in conversations on everyday topics. Begins to narrate and describe in past and future tenses with some control.
+    Advanced
+        Low	    Can narrate and describe across major time frames. Handles routine social and work situations with confidence.
+        Mid	    Can elaborate on topics, support opinions, and manage complications in conversations. Shows good control of grammar and vocabulary.
+        High	Can handle complex tasks and unexpected situations. Language is accurate and nuanced, though not always native-like.
+    Superior
+            	Can discuss abstract topics, hypothesize, and tailor language to different audiences. Demonstrates fluency, accuracy, and cultural appropriateness.
+    Distinguished
+            	Can reflect on complex ideas, persuade, and negotiate in highly sophisticated ways. Language is precise, nuanced, and appropriate for any context.
     """
-    # __tablename__ = 'language_level'
-    user_id: Optional[int] = Field(default=None, foreign_key="user.id", primary_key=True)
-    language_id: Optional[int] = Field(default=None, foreign_key="language.id", primary_key=True)
-    level: int
-    update_date: datetime # = Field(default_factory=datetime.now(timezone.utc))
+    __tablename__ = "language_level"
+    id: int | None = Field(default=None, primary_key=True)
+    name: str
+    description: str
 
-
-    def get_language_level_by_user(self, session, user, language):
-        return session.query(LanguageLevel).filter_by(
-            user_id=user.id,
-            language_id=language.id
-        ).first()
-    
-
-    def set_user_language_level(self, session, user, language, level):
-        user_language_level = LanguageLevel(user_id=user.id, language_id=language.id, level=level)
-        user_language_level.update_date = datetime.utcnow()
-        session.add(user_language_level)
-
-        history = LanguageLevelHistory(
-            user_id=user.id,
-            language_id=language.id,
-            level=level,
-            create_date=datetime.utcnow()
-        )
-        session.add(history)
-
-        session.commit()
-        return user_language_level
+ 

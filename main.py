@@ -6,11 +6,9 @@ from contextlib import asynccontextmanager
 from fastapi.responses import JSONResponse, StreamingResponse
 from requests_toolbelt.multipart import MultipartEncoder
 
-
+from routes import user_api, language_api
 from utils import get_app_logger
-from orm import init_db, start_db, get_session
-from orm.user_orm import UserOrm
-from entity import User, Language, LanguageLevel, LanguageLevelHistory
+from db import init_db, start_db, get_session
 from service import SpeechToText
 
 
@@ -36,29 +34,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.include_router(user_api.router, prefix="/api/user", tags=["Users"])
+app.include_router(language_api.router, prefix="/api/language", tags=["Languages"])
 
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Language Learning API"}
-
-@app.post("/user/add")
-def add_user(user: User, session=Depends(get_session)):
-    user_orm = UserOrm()
-    user_orm.add_user(session, user)
-
-
-@app.get("/user/{user_id}")
-def get_user(user_id: int, session=Depends(get_session)):
-    user_orm = UserOrm()
-    user = user_orm.get_user_by_id(session, user_id)
-    return user
-
-from service import get_all_languages
-
-@app.get("/languages")
-def get_languages(session=Depends(get_session)):
-    languages = get_all_languages(session)
-    return languages
 
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
