@@ -1,8 +1,10 @@
-from .language import Language
-from .language_level import LanguageLevel
+from .subject import Subject
+from .subject_category import SubjectCategory
+from .subject_level import SubjectLevel
+from .subject_level_translation import SubjectLevelTranslation
+from .topic import Topic
 from .user import User
-from .user_level import UserLevel
-from .user_level_history import UserLevelHistory
-from .language import Language
-from .language_level import LanguageLevel
-
+from .user_course import UserCourse
+from .user_topic import UserTopic
+from .course import Course
+from .exercise_result import ExerciseResult

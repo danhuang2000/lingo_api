@@ -2,7 +2,7 @@ import uuid
 import logging
 
 from sqlmodel import Session, select
-from entity import User, UserLevel, UserLevelHistory
+from entity import User
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
@@ -56,53 +56,3 @@ class UserService:
         return False
 
 
-    def get_level_by_user(self, user, language):
-        statement = (select(UserLevel)
-                .join(User, UserLevel.user_id == User.id)
-                .where((User.id == user.id) & (User.language_id == language.id))
-            )
-        result = self.session.exec(statement).first()
-        return result
-        
-
-    def set_user_level(self, user, language, level):
-        user_level = UserLevel(user_id=user.id, language_id=language.id, level=level)
-        user_level.update_date = datetime.now(timezone.utc)
-        self.session.add(user_level)
-
-        history = UserLevelHistory(
-            user_id=user.id,
-            language_id=language.id,
-            level=level,
-            create_date=datetime.now(timezone.utc)
-        )
-        self.session.add(history)
-
-        self.session.commit()
-        return user_level
-
-    
-    def add_user_level_history(self, user_id, language_id, level):
-        history = UserLevelHistory(
-            user_id=user_id,
-            language_id=language_id,
-            level=level,
-            create_date=datetime.now(timezone.utc)
-        )
-        self.session.add(history)
-        self.session.commit()
-        return history
-    
-
-    def get_user_level_history(self, user_id, language_id):
-        return self.session.query(UserLevelHistory).filter_by(
-            user_id=user_id,
-            language_id=language_id
-        ).all()
-
-    
-    def delete_user_level_history(self, user_id):
-        histories = self.session.query(UserLevelHistory).filter_by(
-            user_id=user_id
-        ).delete()
-        self.session.commit()

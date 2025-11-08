@@ -1,10 +1,14 @@
 
 from .base_agent import BaseAgent
 from .ai_client import AiClient
-from entity import Language
+from entity import Subject
 
 class QnAAgent(BaseAgent):
-    def __init__(self, client: AiClient, primary_language: Language, secondary_language: Language):
+    def __init__(self, client: AiClient, primary_language: Subject, secondary_language: Subject):
+        LANGuAGE_CATEGORY_ID = 1  
+        if (primary_language.category_id != LANGuAGE_CATEGORY_ID) or (secondary_language.category_id != LANGuAGE_CATEGORY_ID):
+            raise ValueError("Both primary and secondary languages must belong to the 'Language' category.")
+        
         super().__init__(
             client, 
             instructions=

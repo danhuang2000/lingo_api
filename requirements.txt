@@ -13,4 +13,5 @@ langchain
 langchain-ollama
 langchain-community
 langgraph
+mysql-connector-python
 pytest

@@ -2,20 +2,26 @@ from typing import List
 from datetime import datetime, timezone
 from sqlmodel import Field, SQLModel, Relationship
 
-from .user_level import UserLevel
-from .user_level_history import UserLevelHistory
+from .user_course import UserCourse
+from .user_topic import UserTopic
 
 
 class User(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     uuid: str | None = Field(default=None, index=True, unique=True)
-    name: str
+    name: str | None = None
     email: str | None = None
-    phone: str
+    phone: str | None = None
     create_date: datetime | None
     update_date: datetime | None
 
-    levels: List[UserLevel] = Relationship(back_populates="user")
-    level_histories: List[UserLevelHistory] = Relationship(back_populates="user")
+    courses: List[UserCourse] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"lazy": "select"}  # Lazy loading
+    )
+    topics: List[UserTopic] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"lazy": "select"}  # Lazy loading
+    )
 
 

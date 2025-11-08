@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi.responses import JSONResponse, StreamingResponse
 from requests_toolbelt.multipart import MultipartEncoder
 
-from routes import user_api, language_api
+from routes import course_api, user_api
 from utils import get_app_logger
 from db import init_db, start_db, get_session
 from service import SpeechToText
@@ -25,7 +25,8 @@ logger = get_app_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    database_url = "sqlite:///./sqlite.db"  # Example database URL
+    # database_url = "sqlite:///./sqlite.db"  # Example database URL
+    database_url = "mysql+mysqlconnector://localhost:3306/lingoDB"
     engine = init_db(database_url)
     start_db(engine)
     yield
@@ -35,7 +36,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 app.include_router(user_api.router, prefix="/api/user", tags=["Users"])
-app.include_router(language_api.router, prefix="/api/language", tags=["Languages"])
+app.include_router(course_api.router, prefix="/api/courses", tags=["Courses"])
 
 @app.get("/")
 def read_root():

@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlmodel import Field, SQLModel, Relationship
 
 
-class LanguageLevel(SQLModel, table=True):
+class SubjectLevel(SQLModel, table=True):
     """
     Language level entity representing a user's proficiency in a specific language.
     ACTFL levels are used: 
@@ -24,8 +24,10 @@ class LanguageLevel(SQLModel, table=True):
     Distinguished
             	Can reflect on complex ideas, persuade, and negotiate in highly sophisticated ways. Language is precise, nuanced, and appropriate for any context.
     """
-    __tablename__ = "language_level"
+    __tablename__ = "subject_level"
     id: int | None = Field(default=None, primary_key=True)
+    subject_category_id: int = Field(foreign_key="subject_category.id")
+    level: int
     name: str
     description: str
 
