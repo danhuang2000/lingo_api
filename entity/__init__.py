@@ -3,6 +3,7 @@ from .subject_category import SubjectCategory
 from .subject_level import SubjectLevel
 from .subject_level_translation import SubjectLevelTranslation
 from .topic import Topic
+from .tutor import Tutor
 from .user import User
 from .user_course import UserCourse
 from .user_topic import UserTopic

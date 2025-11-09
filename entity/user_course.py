@@ -7,7 +7,9 @@ class UserCourse(SQLModel, table=True):
     __tablename__ = "user_course"
     user_id: int = Field(default=None, foreign_key="user.id", primary_key=True)
     course_id: int = Field(default=None, foreign_key="course.id", primary_key=True)
+    tutor_id: Optional[int] = Field(default=None, foreign_key="tutor.id")
     is_active: bool = Field(default=True)
+    instruction_lang_code: str = Field(default="en-US", max_length=5)
     enrollment_date: datetime = Field(default_factory=datetime.now(timezone.utc))
     completion_date: Optional[datetime] = None
 

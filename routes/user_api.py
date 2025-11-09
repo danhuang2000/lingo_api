@@ -11,7 +11,7 @@ router = APIRouter()
 def add_user(user: User, session=Depends(get_session)):
     # TODO validate token
     user_service = UserService(session=session)
-    user_service.add_user(user)
+    return user_service.add_user(user)
 
 
 @router.get("/get/{user_uuid}")
