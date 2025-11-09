@@ -1,7 +1,7 @@
 import logging
 import io
 from dotenv import load_dotenv
-from fastapi import FastAPI, Depends, File, UploadFile, HTTPException
+from fastapi import FastAPI, Depends, File, Request, UploadFile, HTTPException
 from contextlib import asynccontextmanager
 from fastapi.responses import JSONResponse, StreamingResponse
 from requests_toolbelt.multipart import MultipartEncoder
@@ -63,6 +63,17 @@ async def upload_audio_stream(file: UploadFile = File(...)):
 from fastapi.staticfiles import StaticFiles
 app.mount("/audio", StaticFiles(directory="audio_files"), name="static")
 app.mount("/image", StaticFiles(directory="image_files"), name="static")
+
+
+@app.middleware("http")
+async def log_request_body(request: Request, call_next):
+    headers = dict(request.headers)
+    logger.debug(f"Request headers: {headers}")
+    body = await request.body()
+    logger.debug(f"Raw request body: {body}")
+    response = await call_next(request)
+    return response
+
 
 from pydantic import BaseModel
 
