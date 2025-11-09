@@ -1,7 +1,10 @@
 __pycache__/
+image_files/
 .venv
 .vscode
 *.sqlite3
 *.db
-
+*.bak
+*.wav
+*.m4a
 
