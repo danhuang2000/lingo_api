@@ -19,3 +19,10 @@ def get_subject_levels(category_id: int, session=Depends(get_session)):
     service = CourseService(session=session)
     levels = service.get_subject_levels(category_id=category_id)
     return levels
+
+@router.get("/tutors")
+def get_tutors(session=Depends(get_session)):
+    # TODO validate token
+    service = CourseService(session=session)
+    tutors = service.get_tutors()
+    return tutors
