@@ -26,3 +26,10 @@ def get_tutors(session=Depends(get_session)):
     service = CourseService(session=session)
     tutors = service.get_tutors()
     return tutors
+
+@router.get("/instructionlanguages")
+def get_instruction_languages(session=Depends(get_session)):
+    # TODO validate token
+    service = CourseService(session=session)
+    instruction_languages = service.get_instruction_languages()
+    return instruction_languages

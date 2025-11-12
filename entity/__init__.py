@@ -9,3 +9,4 @@ from .user_course import UserCourse
 from .user_topic import UserTopic
 from .course import Course
 from .exercise_result import ExerciseResult
+from .instruction_language import InstructionLanguage

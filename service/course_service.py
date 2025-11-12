@@ -1,5 +1,5 @@
 from sqlmodel import Session, select
-from entity import Subject, SubjectLevel, Tutor
+from entity import Subject, SubjectLevel, Tutor, InstructionLanguage
 
 class CourseService:
     def __init__(self, session: Session):
@@ -23,4 +23,10 @@ class CourseService:
         rows = self.session.exec(stmt).all()
         tutors = [Tutor(id=row.id, name=row.name, url=row.url, description=row.description) for row in rows]
         return tutors
+    
+    def get_instruction_languages(self):
+        stmt = select(InstructionLanguage.id, InstructionLanguage.name, InstructionLanguage.code)
+        rows = self.session.exec(stmt).all()
+        languages = [InstructionLanguage(id=row.id, name=row.name, code=row.code) for row in rows]
+        return languages
  
