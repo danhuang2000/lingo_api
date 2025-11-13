@@ -14,4 +14,7 @@ langchain-ollama
 langchain-community
 langgraph
 mysql-connector-python
+cryptography
+pyasn1
+cbor2
 pytest

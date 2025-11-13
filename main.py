@@ -67,6 +67,7 @@ app.mount("/image", StaticFiles(directory="image_files"), name="static")
 
 @app.middleware("http")
 async def log_request_body(request: Request, call_next):
+    
     headers = dict(request.headers)
     logger.debug(f"Request headers: {headers}")
     body = await request.body()
