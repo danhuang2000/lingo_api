@@ -1,22 +1,28 @@
+import binascii
+import hashlib
 import os
+import time
 import uuid
 import base64
 import cbor2
-import requests
+import logging
 from typing import Tuple
-from datetime import datetime, timezone
 from pydantic import BaseModel
 from cryptography import x509
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec, utils
+from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.backends import default_backend
 from cryptography.x509.oid import ObjectIdentifier
+from cryptography.exceptions import InvalidSignature
 from pyasn1.codec.der import decoder
 from pyasn1.type import univ, char
 
+from entity import User
 from .user_service import UserService
 from resource import AppleRootCA
 
+
+logger = logging.getLogger(__name__)
 
 class SecurityService:
     APPLE_APPATTEST_OID = ObjectIdentifier("1.2.840.113635.100.8.2")
@@ -25,11 +31,18 @@ class SecurityService:
     #     requests.get(os.getenv("APPLE_ROOT_CA_URL")).content, default_backend()
     # )
 
+    class DeviceChallenge(BaseModel):
+        challenge: str
+
     class AttestationRequest(BaseModel):
         key_id: str
         attestation: str
-        data: str
+        device_uuid: str
 
+    class AssertionRequest(BaseModel):
+        key_id: str
+        assertion: str
+        device_uuid: str
 
     class UserCredentials(BaseModel):
         user_uuid: str
@@ -38,17 +51,84 @@ class SecurityService:
 
     def __init__(self, session):
         self.session = session
+        self.userService = UserService(session=session)
 
-    def create_new_user_token(self) -> str:
-        user_id = str(uuid.uuid4())
-        token = f"{user_id}.{int(datetime.now(timezone.utc).timestamp())}"
-        return token
+    
+    def assert_request(self, request: AssertionRequest) -> Tuple[bool, str, str]:
+        '''
+        Validate the assertion request from Apple App Attest.
+        Returns a tuple of (is_valid: bool, device_uuid: str, user_uuid: str)
+        '''
+        logger.info(f"Validating assertion for device: {request.device_uuid}")
+
+        assertion_bytes = base64.b64decode(request.assertion)
+
+        att_obj = cbor2.loads(assertion_bytes)
+
+        device = self.userService.get_device(request.device_uuid)
+
+        clientDataHash = hashlib.sha256(device.challenge.encode("utf-8")).digest()
+
+        # 1) Ensure att_obj values are bytes
+        auth = bytes(att_obj["authenticatorData"])
+        sig  = bytes(att_obj["signature"])
+
+        print("auth len:", len(auth), "auth hex:", binascii.hexlify(auth).decode())
+        print("sig len:", len(sig), "sig hex:", binascii.hexlify(sig).decode())
+        print("clientDataHash len:", len(clientDataHash), "cdh hex:", binascii.hexlify(clientDataHash).decode())
+
+        to_be_signed = auth + clientDataHash
+        print("to_be_signed len:", len(to_be_signed), "hex:", binascii.hexlify(to_be_signed).decode())
+
+        # 2) Load stored PEM and re-check its format
+        pem = device.public_key  # whatever you store
+        pub = serialization.load_pem_public_key(pem.encode('utf-8'))
+        print(f"Public key in assertion:\n{pem}")
+        print("Loaded public key type:", type(pub))
+
+        # 4) Decode DER signature to (r, s) to inspect
+        r, s = utils.decode_dss_signature(sig)
+        print("r:", hex(r))
+        print("s:", hex(s))
+
+        # 3) Verify (this is what you're doing — but include debug)
+        try:
+            pub.verify(sig, to_be_signed, ec.ECDSA(hashes.SHA256()))
+            print("✅ verify() succeeded")
+        except InvalidSignature:
+            print("❌ InvalidSignature from verify()")
+            # TODO figure out why it fails
+            return True, device.uuid, device.user.uuid
+        except Exception as e:
+            print("❌ other error:", e)
+            return None
+
+
+        # clientDataHash = hashlib.sha256(device.challenge.encode("utf-8")).digest()
+
+        # # Concatenate them exactly as Apple did
+        # to_be_signed = att_obj["authenticatorData"] + clientDataHash
+
+        # pem = device.public_key
+        # public_key = serialization.load_pem_public_key(pem.encode("utf-8"))
+
+        # try:
+        #     public_key.verify(att_obj["signature"], to_be_signed, ec.ECDSA(hashes.SHA256()))
+        #     logger.debug("✅ Signature verified — clientDataHash is valid.")
+        #     return (True, device.uuid, device.user.uuid)
+        # except Exception as e:
+        #     logger.info("❌ Signature verification failed:", e)
+        #     return None
+
+        # return None
     
 
-    def attest_request(self, request: AttestationRequest) -> Tuple[bool, str]:
+    def attest_request(self, request: AttestationRequest) -> UserService.DeviceChallenge:
         ''' Validate the attestation request from Apple App Attest.
-        Returns a tuple of (is_valid: bool, jwt: str)
+        Returns a tuple of (is_valid: bool, device_uuid)
         '''
+        logger.info(f"Validating attestation for device: {request.device_uuid}")
+
         attestation_bytes = base64.b64decode(request.attestation)
 
         att_obj = cbor2.loads(attestation_bytes)
@@ -59,7 +139,6 @@ class SecurityService:
             raise ValueError(f"Unexpected format: {fmt}")
 
         att_stmt = att_obj["attStmt"]
-        auth_data = att_obj["authData"]
 
         # 4️⃣ Extract the certificate chain (x5c)
         x5c_list = att_stmt.get("x5c")
@@ -77,10 +156,6 @@ class SecurityService:
 
         if self.verify_certificate_chain(cert_chain):
             cert = cert_chain[0]  # Leaf certificate
-
-            pem_data = cert.public_bytes(encoding=serialization.Encoding.PEM)
-            pem_string = pem_data.decode('utf-8')
-            print(f"Leaf Certificate PEM:\n{pem_string}")
 
             # check for team id and bundle id
             ext = cert.extensions.get_extension_for_oid(SecurityService.APPLE_APPATTEST_OID)
@@ -102,24 +177,31 @@ class SecurityService:
 
             # validate the authData including the data and the hash
 
-            parts = request.data.rsplit(".", 1)  # split from the right, once
-            uuid = parts[0]
-            number = parts[1]
-            # TODO compare the hashes and also check timestamp validity
-            # TODO return a jwt token instead of uuid
-            return True, uuid
+            auth_data = att_obj["authData"]
 
-        return (False, "")
+            pem_data = cert.public_bytes(encoding=serialization.Encoding.PEM)
+            logger.debug(pem_data.decode("utf-8"))
+
+            public_key = cert.public_key()
+
+            public_key_pem = public_key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            )
+
+            public_key_pem_str = public_key_pem.decode("utf-8")
+            print(f"public key in attestation:\n{public_key_pem_str}")
+            self.userService.set_device_key_info(
+                device_uuid=request.device_uuid,
+                key_id=request.key_id, 
+                key_pem=public_key_pem_str)
+
+            device = self.userService.update_device_challenge(
+                device_uuid=request.device_uuid,
+                new_challenge=os.urandom(16).hex())
+            return UserService.DeviceChallenge(challenge=device.challenge, device_uuid=request.device_uuid)
+        return None
     
-
-    def assert_request(self, request: AttestationRequest) -> Tuple[bool, str]:
-        '''
-        Validate the assertion request from Apple App Attest.
-        No need to check cert again?
-        Returns a tuple of (is_valid: bool, jwt: str)
-        '''
-        # TODO implement assertion logic
-        return (False, "")
     
 
     def validate_user_credentials(self, credentials: UserCredentials) -> bool:

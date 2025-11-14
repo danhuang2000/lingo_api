@@ -5,6 +5,7 @@ from .subject_level_translation import SubjectLevelTranslation
 from .topic import Topic
 from .tutor import Tutor
 from .user import User
+from .device import Device
 from .user_course import UserCourse
 from .user_topic import UserTopic
 from .course import Course

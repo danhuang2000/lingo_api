@@ -4,6 +4,7 @@ from sqlmodel import Field, SQLModel, Relationship
 
 from .user_course import UserCourse
 from .user_topic import UserTopic
+from .device import Device
 
 
 class User(SQLModel, table=True):
@@ -24,4 +25,8 @@ class User(SQLModel, table=True):
         sa_relationship_kwargs={"lazy": "select"}  # Lazy loading
     )
 
-
+    devices: List[Device] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"lazy": "select"}  # Lazy loading
+    )
+    
