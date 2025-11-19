@@ -35,6 +35,12 @@ def get_instruction_languages(session=Depends(get_session)):
     instruction_languages = service.get_instruction_languages()
     return instruction_languages
 
+@router.get("/topics/all")
+def get_all_topics(session=Depends(get_session)):
+    service = CourseService(session=session)
+    topics = service.get_all_topics()
+    return topics
+
 @router.post("/myclass/add")
 def add_user_course(courseData: CourseService.UserCourseData, session=Depends(get_session)):
     service = CourseService(session=session)

@@ -1,7 +1,7 @@
 import logging
 from pydantic import BaseModel
 from sqlmodel import Session, and_, select
-from entity import Subject, SubjectLevel, Tutor, InstructionLanguage, User, UserCourse, Course
+from entity import Subject, SubjectLevel, Tutor, InstructionLanguage, Topic, UserCourse, Course
 from .user_service import UserService
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,11 @@ class CourseService:
         languages = [InstructionLanguage(id=row.id, name=row.name, code=row.code) for row in rows]
         return languages
 
+    def get_all_topics(self):
+        stmt = select(Topic.id, Topic.name, Topic.topic_category_id, Topic.subject_category_id)
+        rows = self.session.exec(stmt).all()
+        topics = [Topic(id=row.id, name=row.name, topic_category_id=row.topic_category_id, subject_category_id=row.subject_category_id) for row in rows]
+        return topics
 
     def add_user_course(self, data: UserCourseData):
         if data.course_id == 0:
