@@ -16,10 +16,11 @@ class User(SQLModel, table=True):
     create_date: datetime | None
     update_date: datetime | None
 
-    courses: List[UserCourse] = Relationship(
+    user_courses: List[UserCourse] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"lazy": "select"}  # Lazy loading
     )
+
     topics: List[UserTopic] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"lazy": "select"}  # Lazy loading

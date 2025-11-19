@@ -14,6 +14,11 @@ class UserCourse(SQLModel, table=True):
     completion_date: Optional[datetime] = None
 
     user: Optional["User"] = Relationship(
-        back_populates="courses",
+        back_populates="user_courses",
+        sa_relationship_kwargs={"lazy": "select"}  # Lazy loading
+    )
+
+    course: Optional["Course"] = Relationship(
+        back_populates="user_courses",
         sa_relationship_kwargs={"lazy": "select"}  # Lazy loading
     )

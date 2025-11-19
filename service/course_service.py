@@ -8,22 +8,18 @@ logger = logging.getLogger(__name__)
 
 class CourseService:
     class UserCourseData(BaseModel):
-        def __init__(self, user_uuid, subject_id, level_id, tutor_id, inst_lang_id):
+        def __init__(self, user_uuid, course_id, subject_id, level_id, tutor_id, instruction_language_id):
             self.user_uuid = user_uuid
+            self.course_id = course_id
             self.subject_id = subject_id
             self.level_id = level_id
             self.tutor_id = tutor_id
-            self.instruction_language_id = inst_lang_id
+            self.instruction_language_id = instruction_language_id
 
 
     def __init__(self, session: Session):
         self.session = session
-
-    def get_user_service(self):
-        if not self.user_service:
-            self.user_service = UserService()
-        return self.user_service
-    
+        self.user_service = UserService(session=session)    
 
     def get_all_subjects(self):
         stmt = select(Subject.id, Subject.name, Subject.code, Subject.category_id)
@@ -49,21 +45,29 @@ class CourseService:
         languages = [InstructionLanguage(id=row.id, name=row.name, code=row.code) for row in rows]
         return languages
 
-    def add_user_course(self, data: UserCourseData):
-        stmt = select(Course).where(
-            and_(Course.subject_id == data.subject_id,
-                 Course.subject_level_id == data.level_id))
-        course = self.session.exec(stmt).first()
-        if not course:
-            course = Course(subject_id=data.subject_id, subject_level_id=data.level_id)
-            self.session.add(course)
-            self.session.commit()
-            self.session.refresh(course)
 
-        user = self.get_user_service.get_user_by_uuid(data.user_uuid)
+    def add_user_course(self, data: UserCourseData):
+        if data.course_id == 0:
+            stmt = select(Course).where(
+                and_(Course.subject_id == data.subject_id,
+                    Course.subject_level_id == data.level_id))
+            course = self.session.exec(stmt).first()
+            if not course:
+                course = Course(subject_id=data.subject_id, subject_level_id=data.level_id)
+                self.session.add(course)
+                self.session.commit()
+                self.session.refresh(course)
+
+        user = self.user_service.get_user_by_uuid(data.user_uuid)
         if not user:
             logger.info(f"Can't find user {data.user_uuid}")
             return None
+        
+        item = next((uc for uc in user.user_courses if uc.course_id == course.id), None)
+
+        if item != None:
+            logger.debug(f"user id={user.id} with course_id={course.id} aleady exist")
+            return item
         
         userCourse = UserCourse(
             user_id=user.id,
@@ -75,13 +79,27 @@ class CourseService:
         self.session.add(userCourse)
         self.session.commit()
         self.session.refresh(userCourse)
+
+        logger.debug(f"Add course_id={course.id} for user {user.id}")
+
         return userCourse
     
 
-    def get_user_courses(self, user: User):
-        stmt = select(Course).join(UserCourse).where(
-            and_(UserCourse.user.uuid == user.uuid,
-                UserCourse.is_active == True))
+    def get_user_courses(self, user_uuid: str) -> list[UserCourseData]:
+        user = self.user_service.get_user_by_uuid(user_uuid)
         
-        results = self.session.exec(stmt).all()
+        results = []
+        for uc in user.user_courses:
+            item = CourseService.UserCourseData(
+                user_uuid=user_uuid,
+                course_id=uc.course_id,
+                subject_id=uc.course.subject_id, 
+                level_id=uc.course.subject_level_id, 
+                tutor_id=uc.tutor_id, 
+                inst_lang_id=uc.instruction_language_id
+            )
+            results.append(item)
+
+        return results
+
  

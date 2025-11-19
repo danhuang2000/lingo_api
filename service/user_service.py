@@ -78,7 +78,7 @@ class UserService:
         return user
     
 
-    def get_user_by_uuid(self, uuid: str):
+    def get_user_by_uuid(self, uuid: str) -> User:
         statement = select(User).where(User.uuid == uuid)
         result = self.session.exec(statement).first()
         if result == None:

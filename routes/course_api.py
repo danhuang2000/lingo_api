@@ -3,7 +3,7 @@ from fastapi.params import Depends
 from db.database import get_session
 
 from entity import User
-from service import CourseService
+from service import CourseService, SecurityService
 
 router = APIRouter()
 
@@ -42,7 +42,7 @@ def add_user_course(courseData: CourseService.UserCourseData, session=Depends(ge
     return userCourse
 
 @router.post("/myclasses")
-def get_user_classes(user: User, session=Depends(get_session)):
+def get_user_classes(user: SecurityService.UserUuidInfo, session=Depends(get_session)):
     service = CourseService(session=session)
-    courses = service.get_user_courses()
+    courses = service.get_user_courses(user.user_uuid)
     return courses

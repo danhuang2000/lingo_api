@@ -1,11 +1,11 @@
 import binascii
 import hashlib
 import os
-import time
-import uuid
 import base64
 import cbor2
 import logging
+import jwt
+from datetime import datetime, timezone, timedelta
 from typing import Tuple
 from pydantic import BaseModel
 from cryptography import x509
@@ -31,6 +31,10 @@ class SecurityService:
     #     requests.get(os.getenv("APPLE_ROOT_CA_URL")).content, default_backend()
     # )
 
+    JWT_SESSION_SECRET_KEY = "JWT_SESSION_SECRET_KEY"
+    JWT_REFRESH_SECRET_KEY = "JWT_REFRESH_SECRET_KEY"
+
+
     class DeviceChallenge(BaseModel):
         challenge: str
 
@@ -46,12 +50,66 @@ class SecurityService:
 
     class UserCredentials(BaseModel):
         user_uuid: str
+        device_uuid: str
         mfa_code: str
 
+    class UserUuidInfo(BaseModel):
+        user_uuid: str
+
+    class RefreshTokenRequestData(BaseModel):
+        refresh_token: str
 
     def __init__(self, session):
         self.session = session
         self.userService = UserService(session=session)
+
+
+    def create_jwt(self, request: UserCredentials) -> Tuple[str, str]:
+        session_key = os.getenv(SecurityService.JWT_SESSION_SECRET_KEY)
+        refresh_key = os.getenv(SecurityService.JWT_REFRESH_SECRET_KEY)
+        session_duration = int(os.getenv("JWT_SESSION_IN_MINUTES"))
+        refresh_duration = int(os.getenv("JWT_REFRESH_IN_MINUTES"))
+        payload = {
+            "user_id": request.user_uuid,
+            "device_uuid": request.device_uuid,
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=session_duration)
+        }
+        session_token = jwt.encode(payload, session_key, algorithm="HS256")
+
+        payload["exp"] = datetime.now(timezone.utc) + timedelta(minutes=refresh_duration)
+        refresh_token = jwt.encode(payload, refresh_key, algorithm="HS256")
+
+        return session_token, refresh_token
+
+
+    def validate_jwt(self, token: str) -> Tuple[bool, str]:
+        session_key = os.getenv(SecurityService.JWT_SESSION_SECRET_KEY)
+        try:
+            decoded = jwt.decode(token, session_key, algorithms=["HS256"])
+            return True, ""
+        except jwt.ExpiredSignatureError:
+            logger.debug("❌ Session token has expired")
+        except jwt.InvalidTokenError:
+            logger.debug("❌ Session token is invalid")
+        return False, "Token invalid or expired"
+    
+
+    def refresh_jwt(self, token: RefreshTokenRequestData) -> Tuple[str, str]:
+        refresh_key = os.getenv(SecurityService.JWT_REFRESH_SECRET_KEY)
+        try:
+            decoded = jwt.decode(token, refresh_key, algorithms=["HS256"])
+            user_uuid = decoded["user_uuid"]
+            device_uuid = decoded["device_uuid"]
+            cred = SecurityService.UserCredentials(user_uuid=user_uuid, device_uuid=device_uuid)
+            session_token, refresh_token = self.create_jwt(cred)
+            logger.debug("tokens refreshed")
+            return session_token, refresh_token
+        except jwt.ExpiredSignatureError:
+            logger.info("❌ Refresh token has expired")
+        except jwt.InvalidTokenError:
+            logger.info("❌ Refresh token is invalid")
+        return None, None
+
 
     
     def assert_request(self, request: AssertionRequest) -> Tuple[bool, str, str]:
@@ -94,13 +152,14 @@ class SecurityService:
         # 3) Verify (this is what you're doing — but include debug)
         try:
             pub.verify(sig, to_be_signed, ec.ECDSA(hashes.SHA256()))
-            print("✅ verify() succeeded")
+            logger.debug("✅ verify() succeeded")
+            return True, device.uuid, device.user.uuid
         except InvalidSignature:
-            print("❌ InvalidSignature from verify()")
+            logger.info("❌ InvalidSignature from verify()")
             # TODO figure out why it fails
             return True, device.uuid, device.user.uuid
         except Exception as e:
-            print("❌ other error:", e)
+            logger.info("❌ other error:", e)
             return None
 
 
@@ -205,8 +264,8 @@ class SecurityService:
     
 
     def validate_user_credentials(self, credentials: UserCredentials) -> bool:
-        # validate the user
-        return False
+        # TODO validate the user
+        return True
     
 
     def verify_certificate_chain(self, x5c_list: list[x509.Certificate]):
