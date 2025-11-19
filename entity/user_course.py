@@ -10,11 +10,11 @@ class UserCourse(SQLModel, table=True):
     tutor_id: Optional[int] = Field(default=None, foreign_key="tutor.id")
     is_active: bool = Field(default=True)
     instruction_language_id: Optional[int] = Field(default=None, foreign_key="instruction_language.id")
-    enrollment_date: datetime = Field(default_factory=datetime.now(timezone.utc))
+    enrollment_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completion_date: Optional[datetime] = None
 
     user: Optional["User"] = Relationship(
-        back_populates="user_courses",
+        back_populates="courses",
         sa_relationship_kwargs={"lazy": "select"}  # Lazy loading
     )
 

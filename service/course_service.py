@@ -8,13 +8,12 @@ logger = logging.getLogger(__name__)
 
 class CourseService:
     class UserCourseData(BaseModel):
-        def __init__(self, user_uuid, course_id, subject_id, level_id, tutor_id, instruction_language_id):
-            self.user_uuid = user_uuid
-            self.course_id = course_id
-            self.subject_id = subject_id
-            self.level_id = level_id
-            self.tutor_id = tutor_id
-            self.instruction_language_id = instruction_language_id
+        user_uuid: str
+        course_id: int
+        subject_id: int
+        level_id: int
+        tutor_id: int
+        instruction_language_id: int
 
 
     def __init__(self, session: Session):
@@ -63,7 +62,7 @@ class CourseService:
             logger.info(f"Can't find user {data.user_uuid}")
             return None
         
-        item = next((uc for uc in user.user_courses if uc.course_id == course.id), None)
+        item = next((uc for uc in user.courses if uc.course_id == course.id), None)
 
         if item != None:
             logger.debug(f"user id={user.id} with course_id={course.id} aleady exist")
@@ -89,14 +88,14 @@ class CourseService:
         user = self.user_service.get_user_by_uuid(user_uuid)
         
         results = []
-        for uc in user.user_courses:
+        for uc in user.courses:
             item = CourseService.UserCourseData(
                 user_uuid=user_uuid,
                 course_id=uc.course_id,
                 subject_id=uc.course.subject_id, 
                 level_id=uc.course.subject_level_id, 
                 tutor_id=uc.tutor_id, 
-                inst_lang_id=uc.instruction_language_id
+                instruction_language_id=uc.instruction_language_id
             )
             results.append(item)
 
