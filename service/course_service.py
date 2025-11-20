@@ -61,6 +61,7 @@ class CourseService:
                 self.session.add(course)
                 self.session.commit()
                 self.session.refresh(course)
+            data.course_id = course.id
 
         user = self.user_service.get_user_by_uuid(data.user_uuid)
         if not user:
@@ -86,7 +87,7 @@ class CourseService:
 
         logger.debug(f"Add course_id={course.id} for user {user.id}")
 
-        return userCourse
+        return data
     
 
     def get_user_courses(self, user_uuid: str) -> list[UserCourseData]:
