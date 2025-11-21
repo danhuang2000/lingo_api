@@ -16,6 +16,7 @@ from cryptography.x509.oid import ObjectIdentifier
 from cryptography.exceptions import InvalidSignature
 from pyasn1.codec.der import decoder
 from pyasn1.type import univ, char
+from cose.messages import CoseMessage
 
 from entity import User
 from .user_service import UserService
@@ -111,6 +112,42 @@ class SecurityService:
         return None, None
 
 
+    def test_alternative(self, assertion: str, device_uuid: str):
+        device = self.userService.get_device(device_uuid)
+
+        clientDataHash = hashlib.sha256(device.challenge.encode("utf-8")).digest()
+
+        # 2) Load stored PEM and re-check its format
+        pem = device.public_key  # whatever you store
+        pub = serialization.load_pem_public_key(pem.encode('utf-8'))
+        print(f"Public key in assertion:\n{pem}")
+        print("Loaded public key type:", type(pub))
+
+        try:
+            cose = CoseMessage.decode(assertion)
+
+            sig = cose.signature
+            payload = cose.payload  # should be authenticatorData || clientHash
+
+            auth_data = payload[:-32]
+            client_hash_from_payload = payload[-32:]
+
+            if client_hash_from_payload != clientDataHash:
+                print("hash not match")
+
+            # Build verification message
+            verified_bytes = cose._sig_structure()
+            
+            pub.verify(
+                sig,
+                verified_bytes,
+                ec.ECDSA(hashes.SHA256())
+            )
+        except InvalidSignature:
+            logger.error("❌ InvalidSignature from verify()")
+        except Exception as e:
+            logger.info("❌ other error:", e)
+
     
     def assert_request(self, request: AssertionRequest) -> Tuple[bool, str, str]:
         '''
@@ -120,6 +157,8 @@ class SecurityService:
         logger.info(f"Validating assertion for device: {request.device_uuid}")
 
         assertion_bytes = base64.b64decode(request.assertion)
+
+        self.test_alternative(assertion_bytes, request.device_uuid)
 
         att_obj = cbor2.loads(assertion_bytes)
 
@@ -155,7 +194,7 @@ class SecurityService:
             logger.debug("✅ verify() succeeded")
             return True, device.uuid, device.user.uuid
         except InvalidSignature:
-            logger.info("❌ InvalidSignature from verify()")
+            logger.error("❌ InvalidSignature from verify()")
             # TODO figure out why it fails
             return True, device.uuid, device.user.uuid
         except Exception as e:

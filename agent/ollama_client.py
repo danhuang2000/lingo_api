@@ -1,6 +1,6 @@
 from langchain_ollama import ChatOllama
 from langchain.schema import BaseMessage
-from .ai_client import AiClient
+from ..agent.ai_client import AiClient
 
 class OllamaClient(AiClient):
     __llm = ChatOllama(

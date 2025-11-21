@@ -1,6 +1,6 @@
 
-from .base_agent import BaseAgent
-from .ai_client import AiClient
+from ..agent.base_agent import BaseAgent
+from ..agent.ai_client import AiClient
 from entity import Subject
 
 class QnAAgent(BaseAgent):

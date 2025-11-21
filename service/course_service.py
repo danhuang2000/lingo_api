@@ -1,4 +1,5 @@
 import logging
+from typing import List
 from pydantic import BaseModel
 from sqlmodel import Session, and_, select
 from entity import Subject, SubjectLevel, Tutor, InstructionLanguage, Topic, UserCourse, Course
@@ -6,6 +7,15 @@ from .user_service import UserService
 
 logger = logging.getLogger(__name__)
 
+class WordData(BaseModel):
+    word: str
+    pronunciation: str
+
+class SentenceData(BaseModel):
+    sentence: List[WordData]
+    translation: str
+    
+ 
 class CourseService:
     class UserCourseData(BaseModel):
         user_uuid: str
@@ -13,6 +23,11 @@ class CourseService:
         subject_id: int
         level_id: int
         tutor_id: int
+        instruction_language_id: int
+
+    class SpeakingLessonRequest(BaseModel):
+        user_uuid: str
+        course_id: int
         instruction_language_id: int
 
 
@@ -108,3 +123,5 @@ class CourseService:
         return results
 
  
+    def get_speaking_lesson(self, reques: SpeakingLessonRequest):
+        pass
