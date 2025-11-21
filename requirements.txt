@@ -15,6 +15,7 @@ langchain-community
 langgraph
 PyJWT
 mysql-connector-python
+cose
 cryptography
 pyasn1
 cbor2

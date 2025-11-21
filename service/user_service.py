@@ -1,13 +1,13 @@
 import os
 import uuid
 import time
-import logging
 
+from utils import get_app_logger
 from sqlmodel import Session, select
 from entity import User, Device
 from datetime import datetime, timezone
 
-logger = logging.getLogger(__name__)
+logger = get_app_logger(__name__)
 
 class UserService:
     class DeviceChallenge:

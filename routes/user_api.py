@@ -1,12 +1,12 @@
-import logging
 from fastapi import APIRouter, HTTPException
 from fastapi.params import Depends
 from db.database import get_session
 
+from utils import get_app_logger
 from entity import User
 from service import UserService, SecurityService
 
-logger = logging.getLogger(__name__)
+logger = get_app_logger(__name__)
 
 router = APIRouter()
 

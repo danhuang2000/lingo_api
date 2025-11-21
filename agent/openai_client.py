@@ -3,7 +3,7 @@ from langchain.schema import BaseMessage
 import openai
 
 from utils import get_app_logger
-from ..agent.ai_client import AiClient
+from .ai_client import AiClient
 
 logger = get_app_logger(__name__)
 
@@ -23,7 +23,6 @@ class OpenAiClient(AiClient):
         response = openai.chat.completions.create(
             model="gpt-4.1-mini",  # 4.1 mini model
             messages=openai_messages,
-            api_key=self.api_key,
             temperature=0.7,
         )
         response_content = response.choices[0].message.content

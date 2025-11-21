@@ -3,7 +3,6 @@ import hashlib
 import os
 import base64
 import cbor2
-import logging
 import jwt
 from datetime import datetime, timezone, timedelta
 from typing import Tuple
@@ -18,12 +17,13 @@ from pyasn1.codec.der import decoder
 from pyasn1.type import univ, char
 from cose.messages import CoseMessage
 
-from entity import User
 from .user_service import UserService
+from utils import get_app_logger
+from entity import User
 from resource import AppleRootCA
 
 
-logger = logging.getLogger(__name__)
+logger = get_app_logger(__name__)
 
 class SecurityService:
     APPLE_APPATTEST_OID = ObjectIdentifier("1.2.840.113635.100.8.2")

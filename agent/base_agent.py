@@ -1,6 +1,7 @@
 from utils import get_app_logger
-from langchain.schema import SystemMessage, HumanMessage, AIMessage
+from langchain.schema import BaseMessage
 from .ai_client import AiClient
+
 
 logger = get_app_logger(__name__)
 
@@ -8,18 +9,25 @@ logger = get_app_logger(__name__)
 class BaseAgent:
     def __init__(self, client: AiClient, instructions: str):
         self.client = client
-        self.messages = []
-        self.system_message = SystemMessage(content=instructions)
+        self.hist_messages = []
+        self.system_message = BaseMessage(content=instructions, type="system")
+
+
+    def append_assistant_message(self, message: str):
+        self.hist_messages.append(BaseMessage(content=message, type="assistant"))
+
+
+    def append_user_message(self, message: str):
+        self.hist_messages.append(BaseMessage(content=message, type="user"))
+
+    
+    def clear_history_messages(self):
+        self.hist_messages = []
 
 
     def ask_ai(self, question: str) -> str:
-        messages = [
-            self.system_message,
-            HumanMessage(content=question)
-        ]
-        logger.debug("Messages sent to AI:")
-        for msg in messages:
-            logger.debug(f"  {msg}")
+        user_message = BaseMessage(content=question, type="user")
+        messages = [self.system_message] + self.hist_messages + [user_message]
         response = self.client.ask_ai(messages)
         logger.debug(f"AI Response: {response}")
         return response

@@ -52,3 +52,9 @@ def get_user_classes(user: SecurityService.UserUuidInfo, session=Depends(get_ses
     service = CourseService(session=session)
     courses = service.get_user_courses(user.user_uuid)
     return courses
+
+
+@router.post("/lesson/speaking")
+def get_speaking_lesson(request: CourseService.SpeakingLessonRequest, session=Depends(get_session)):
+    service = CourseService(session=session)
+    return service.get_speaking_lesson(request=request)

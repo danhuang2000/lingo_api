@@ -1,11 +1,14 @@
-import logging
+import json
 from typing import List
 from pydantic import BaseModel
 from sqlmodel import Session, and_, select
 from entity import Subject, SubjectLevel, Tutor, InstructionLanguage, Topic, UserCourse, Course
 from .user_service import UserService
+from .cache_service import CacheService
+from utils import get_app_logger
+from agent import TutorAgent
 
-logger = logging.getLogger(__name__)
+logger = get_app_logger(__name__)
 
 class WordData(BaseModel):
     word: str
@@ -29,41 +32,78 @@ class CourseService:
         user_uuid: str
         course_id: int
         instruction_language_id: int
+        topic: str
+        lesson_type: str
 
 
     def __init__(self, session: Session):
         self.session = session
         self.user_service = UserService(session=session)    
 
+
     def get_all_subjects(self):
+        cache = CacheService()
+        key = "all_subjects"
+        if cache.contain(key=key):
+            return cache.get(key=key)
+        
         stmt = select(Subject.id, Subject.name, Subject.code, Subject.category_id)
         rows = self.session.exec(stmt).all()
         subjects = [Subject(id=row.id, name=row.name, code=row.code, category_id=row.category_id) for row in rows]
+        cache.add(key=key, value=subjects)
         return subjects
-    
+
+
     def get_subject_levels(self, category_id: int):
+        cache = CacheService()
+        key = f"all_levels_{category_id}"
+        if cache.contain(key=key):
+            return cache.get(key=key)
+        
         stmt = select(SubjectLevel.id, SubjectLevel.name, SubjectLevel.description).where(SubjectLevel.subject_category_id == category_id)
         rows = self.session.exec(stmt).all()
         levels = [SubjectLevel(id=row.id, name=row.name, description=row.description) for row in rows]
+        cache.add(key=key, value=levels)
         return levels
     
+
     def get_tutors(self):
+        cache = CacheService()
+        key = "tutors"
+        if cache.contain(key=key):
+            return cache.get(key=key)
+        
         stmt = select(Tutor.id, Tutor.name, Tutor.description, Tutor.url)
         rows = self.session.exec(stmt).all()
         tutors = [Tutor(id=row.id, name=row.name, url=row.url, description=row.description) for row in rows]
+        cache.add(key=key, value=tutors)
         return tutors
     
+
     def get_instruction_languages(self):
+        cache = CacheService()
+        key = "instruction_languages"
+        if cache.contain(key=key):
+            return cache.get(key=key)
         stmt = select(InstructionLanguage.id, InstructionLanguage.name, InstructionLanguage.code)
         rows = self.session.exec(stmt).all()
         languages = [InstructionLanguage(id=row.id, name=row.name, code=row.code) for row in rows]
+        cache.add(key=key, value=languages)
         return languages
 
+
     def get_all_topics(self):
+        cache = CacheService()
+        key = "all_topics"
+        if cache.contain(key=key):
+            return cache.get(key=key)
+        
         stmt = select(Topic.id, Topic.name, Topic.topic_category_id, Topic.subject_category_id)
         rows = self.session.exec(stmt).all()
         topics = [Topic(id=row.id, name=row.name, topic_category_id=row.topic_category_id, subject_category_id=row.subject_category_id) for row in rows]
+        cache.add(key=key, value=topics)
         return topics
+    
 
     def add_user_course(self, data: UserCourseData):
         if data.course_id == 0:
@@ -122,6 +162,30 @@ class CourseService:
 
         return results
 
- 
-    def get_speaking_lesson(self, reques: SpeakingLessonRequest):
-        pass
+
+    def get_speaking_lesson(self, request: SpeakingLessonRequest):
+        user = self.user_service.get_user_by_uuid(request.user_uuid)
+        user_course = next((item for item in user.courses if item.course_id == request.course_id), None)
+        if user_course == None:
+            logger.debug("can't find course {request.course_id} for user {request.user_uuid}")
+            return None
+        
+        course = user_course.course
+
+        level_category = 1 # TODO we hard code the subject category
+        subject = next((s for s in self.get_all_subjects() if s.id == course.subject_id), None)
+        level = next((l for l in self.get_subject_levels(level_category) if l.id == course.subject_level_id), None)
+        tutor = next((t for t in self.get_tutors() if t.id == user_course.tutor_id), None)
+        inst_lang = next((i for i in self.get_instruction_languages() if i.id == user_course.instruction_language_id), None)
+
+        lesson_type = TutorAgent.LessonType[request.lesson_type]
+
+        if subject and level and tutor and inst_lang:
+            agent = TutorAgent(subject=subject, level=level, tutor=tutor, inst_lang=inst_lang, topic=request.topic, lesson=lesson_type)
+            result = agent.ask_ai(question="Please give me a new set of exercises")
+            return result
+        else:
+            logger.info(f"Invalid request: {json.dumps(request)}")
+
+        return None
+        
