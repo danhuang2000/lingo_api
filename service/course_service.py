@@ -2,6 +2,7 @@ import json
 from typing import List
 from pydantic import BaseModel
 from sqlmodel import Session, and_, select
+from fastapi.responses import JSONResponse
 from entity import Subject, SubjectLevel, Tutor, InstructionLanguage, Topic, UserCourse, Course
 from .user_service import UserService
 from .cache_service import CacheService
@@ -183,7 +184,8 @@ class CourseService:
         if subject and level and tutor and inst_lang:
             agent = TutorAgent(subject=subject, level=level, tutor=tutor, inst_lang=inst_lang, topic=request.topic, lesson=lesson_type)
             result = agent.ask_ai(question="Please give me a new set of exercises")
-            return result
+            data = json.loads(result)
+            return JSONResponse(content=data)
         else:
             logger.info(f"Invalid request: {json.dumps(request)}")
 
