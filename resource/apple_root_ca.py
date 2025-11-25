@@ -1,9 +1,9 @@
 import os
-import logging
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+from utils import get_app_logger
 
-logger = logging.getLogger(__name__)
+logger = get_app_logger(__name__)
 
 class AppleRootCA:
     ROOT_CERT: str = None
