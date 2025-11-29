@@ -146,6 +146,36 @@ class CourseService:
         return data
     
 
+    def update_user_course(self, data: UserCourseData):
+        if data.course_id == 0:
+            logger.debug("course_id is 0, which is invalid for update_user_course")
+            return None
+
+        user = self.user_service.get_user_by_uuid(data.user_uuid)
+        if not user:
+            logger.info(f"Can't find user {data.user_uuid}")
+            return None
+
+        stmt = select(UserCourse).where(UserCourse.user_id == user.id, UserCourse.course_id == data.course_id)
+
+        item = self.session.exec(stmt).first()
+
+        if item == None:
+            logger.debug(f"user id={user.id} has no course_id={data.course_id}")
+            return item
+        
+        item.tutor_id = data.tutor_id
+        item.instruction_language_id = data.instruction_language_id
+
+        self.session.add(item)
+        self.session.commit()
+        self.session.refresh(item)
+
+        logger.debug(f"Update course_id={data.course_id} for user {user.id}")
+
+        return data
+
+
     def get_user_courses(self, user_uuid: str) -> list[UserCourseData]:
         user = self.user_service.get_user_by_uuid(user_uuid)
         

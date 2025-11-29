@@ -75,11 +75,13 @@ class SecurityService:
             "device_uuid": request.device_uuid,
             "exp": datetime.now(timezone.utc) + timedelta(minutes=session_duration)
         }
+        logger.debug(f"Create session token for {request.user_uuid}")
         session_token = jwt.encode(payload, session_key, algorithm="HS256")
 
         payload["exp"] = datetime.now(timezone.utc) + timedelta(minutes=refresh_duration)
+        logger.debug("create refresh token")
         refresh_token = jwt.encode(payload, refresh_key, algorithm="HS256")
-
+        logger.debug(f"return {session_token} and {refresh_token}")
         return session_token, refresh_token
 
 
@@ -304,6 +306,7 @@ class SecurityService:
 
     def validate_user_credentials(self, credentials: UserCredentials) -> bool:
         # TODO validate the user
+        logger.warn("TODO implement validate_user_credentials")
         return True
     
 

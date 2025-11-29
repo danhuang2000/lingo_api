@@ -47,6 +47,12 @@ def add_user_course(courseData: CourseService.UserCourseData, session=Depends(ge
     userCourse = service.add_user_course(courseData)
     return userCourse
 
+@router.post("/myclass/update")
+def update_user_course(course: CourseService.UserCourseData, session=Depends(get_session)):
+    service = CourseService(session=session)
+    userCourse = service.update_user_course(course)
+    return userCourse
+
 @router.post("/myclasses")
 def get_user_classes(user: SecurityService.UserUuidInfo, session=Depends(get_session)):
     service = CourseService(session=session)
