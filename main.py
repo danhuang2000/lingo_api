@@ -95,8 +95,9 @@ async def get_speaking_practice():
 @app.post("/question")
 async def ask_qustion(content: DualLangContent):
     try:
-        from service import OllamaClient, OpenAiClient, StubClient, QnAAgent, TextToSpeech
-        from entity import Language
+        from agent import OllamaClient, OpenAiClient, StubClient, QnAAgent
+        from service import TextToSpeech
+        from entity import InstructionLanguage
         import json
 
         logger.info(f"lang={content.content1.lang} text={content.content1.text}")
@@ -105,8 +106,8 @@ async def ask_qustion(content: DualLangContent):
         # client = OpenAiClient()
         # client = OllamaClient()
         client = StubClient()
-        english = Language(code="en", name="English")
-        chinese = Language(code="zh", name="Chinese")
+        english = InstructionLanguage(code="en", name="English")
+        chinese = InstructionLanguage(code="zh", name="Chinese")
         agent = QnAAgent(client, primary_language=english, secondary_language=chinese)
         answer = agent.ask_ai(content.content1.text)
         logger.info(f"AI Answer: {answer}")
