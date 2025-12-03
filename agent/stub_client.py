@@ -201,10 +201,21 @@ EXAMPLE_2 = """[
     "translation": "My hobby is traveling."
   }
 ]"""
+
+AUDI_EXAMPLE_1 = """
+{"question":
+[{"lang":"en","text":"What is the meaning of"},{"lang":"es","text":"aqua"},{"lang":"en","text":"?"}]},
+"answer":
+[{"lang":"en","text":"The meaning of"},{"lang":"es","text":"agua"},{"lang":"en","text":"is water."}]}
+]
+"""
+
 class StubClient(AiClient):
     def ask_ai(self, messages: list[BaseMessage]) -> str:
         content = messages[0].content
         if content.find("Spanish") > 0:
+            if content.find("from the same audio input") > 0:
+                return AUDI_EXAMPLE_1
             return EXAMPLE_1
         elif content.find("Japanese") > 0:
             return EXAMPLE_2

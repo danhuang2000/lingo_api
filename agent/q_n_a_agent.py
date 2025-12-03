@@ -3,6 +3,7 @@ from .base_agent import BaseAgent
 from .ai_client import AiClient
 from entity import Subject
 
+# TODO remove this file as it will be replaced by VoiceTutorAgent
 class QnAAgent(BaseAgent):
     def __init__(self, client: AiClient, primary_language: Subject, secondary_language: Subject):
         super().__init__(
