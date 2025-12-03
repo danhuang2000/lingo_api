@@ -14,7 +14,7 @@ router = APIRouter()
 @router.post("/question")
 def ask_question(request: TutoringService.AskTutorRequest, session=Depends(get_session)):
     service = TutoringService(session=session)
-    response = session.run(service.askQuestion(request))
+    response = service.askQuestion(request)
     if not response:
         raise HTTPException(status_code=500, detail="Could not get answer from tutor.")
     return response

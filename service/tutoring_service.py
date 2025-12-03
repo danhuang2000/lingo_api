@@ -19,7 +19,7 @@ class TutoringService:
         self.session = session
 
 
-    async def askQuestion(self, request: AskTutorRequest) -> AskTutorResponse:
+    def askQuestion(self, request: AskTutorRequest) -> AskTutorResponse:
         from agent import StubClient, QnAAgent
         from entity import InstructionLanguage
 
@@ -30,4 +30,4 @@ class TutoringService:
         language = InstructionLanguage(code=request.language_code, name="Language")
         agent = QnAAgent(client, primary_language=instruction_language, secondary_language=language)
         answer = agent.ask_ai(request.question)
-        return self.AskTutorResponse(answer=answer)
+        return TutoringService.AskTutorResponse(answer=answer)
