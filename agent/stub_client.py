@@ -204,10 +204,10 @@ EXAMPLE_2 = """[
 
 AUDI_EXAMPLE_1 = """
 {"question":
-[{"lang":"en","text":"What is the meaning of"},{"lang":"es","text":"aqua"},{"lang":"en","text":"?"}]},
+ [{"lang":"en","text":"What is the meaning of"},{"lang":"es","text":"aqua"},{"lang":"en","text":"?"}],
 "answer":
-[{"lang":"en","text":"The meaning of"},{"lang":"es","text":"agua"},{"lang":"en","text":"is water."}]}
-]
+ [{"lang":"en","text":"The meaning of"},{"lang":"es","text":"agua"},{"lang":"en","text":"is water."}]
+}
 """
 
 class StubClient(AiClient):

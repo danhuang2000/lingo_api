@@ -14,7 +14,7 @@ router = APIRouter()
 @router.post("/question")
 def ask_question(request: TutoringService.AskTutorRequest, session=Depends(get_session)):
     service = TutoringService(session=session)
-    response = service.askQuestion(request)
+    response = service.askForTextResponse(request)
     if not response:
         raise HTTPException(status_code=500, detail="Could not get answer from tutor.")
     return response
@@ -23,7 +23,7 @@ def ask_question(request: TutoringService.AskTutorRequest, session=Depends(get_s
 @router.post("/audio/question")
 def ask_question_with_audio(request: TutoringService.DualLangRequest, session=Depends(get_session)):
     service = TutoringService(session=session)
-    response = service.askQuestionWithAudio(request)
+    response = service.askForAudioResponse(request)
     if not response:
         raise HTTPException(status_code=500, detail="Could not get answer from tutor with audio.")
     return response

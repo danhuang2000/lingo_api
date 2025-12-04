@@ -1,12 +1,15 @@
 
+from __future__ import annotations
+import json
+from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 from fastapi import HTTPException
-from pydantic import BaseModel
+from typing import List
 from requests_toolbelt.multipart import MultipartEncoder
 from sqlmodel import Session, select
 
-from agent import VoiceTutorAgent, StubClient
-from entity import Subject, Tutor, User
+from agent import VoiceTutorAgent
+from entity import User, Subject, SubjectLevel, InstructionLanguage, Tutor
 from audio import TextToSpeech
 from utils import get_app_logger
 
@@ -33,16 +36,17 @@ class TutoringService:
     class AiResponseFragment(BaseModel):
         lang: str
         text: str
+
     class AiResponse(BaseModel):
-        question: ["TutoringService.AiResponseFragment"]
-        answer: ["TutoringService.AiResponseFragment"]
+        question: List[TutoringService.AiResponseFragment]
+        answer: List[TutoringService.AiResponseFragment]
 
 
     def __init__(self, session: Session):
         self.session = session
 
 
-    def askQuestion(self, request: AskTutorRequest) -> AskTutorResponse:
+    def askForTextResponse(self, request: AskTutorRequest) -> AskTutorResponse:
         from agent import StubClient, QnAAgent
         from entity import InstructionLanguage
 
@@ -56,9 +60,8 @@ class TutoringService:
         return TutoringService.AskTutorResponse(answer=answer)
 
 
-    def askQuestionWithAudio(self, request: "TutoringService.DualLangRequest"):
+    def askForAudioResponse(self, request: "TutoringService.DualLangRequest"):
         try:
-            # TODO 
             logger.info(f"user_uuid={request.user_uuid} course_id={request.course_id}\n{request.text_1}\n{request.text_2}")
 
             stmt = select(User).where(User.uuid == request.user_uuid)
@@ -66,18 +69,25 @@ class TutoringService:
             if user is None:
                 raise ValueError(f"{request.user_uuid} user not found.")
 
-            course = user.courses.filter(Subject.id == request.course_id).first()
+            course = next((c for c in user.courses if c.course_id == request.course_id), None)
             if course is None:
                 raise ValueError(f"Course id {request.course_id} not found for user {request.user_uuid}.")
 
-            subj = course.course.subject
-            level = course.course.level
-            inst_lang = course.instruction_language
-
-            stmt = select(Tutor).where(Tutor.id == user.course.tutor_id)
-            tutor = self.session.exec(stmt).first()
+            subj = self.session.get(Subject, course.course.subject_id)
+            if subj is None:
+                raise ValueError(f"Subject id {course.course.subject_id} not found.")
+            
+            level = self.session.get(SubjectLevel, course.course.subject_level_id)
+            if level is None:
+                raise ValueError(f"Subject level id {course.course.subject_level_id} not found.")
+            
+            inst_lang = self.session.get(InstructionLanguage, course.instruction_language_id)
+            if inst_lang is None:
+                raise ValueError(f"Instruction language id {course.instruction_language_id} not found.")
+            
+            tutor = self.session.get(Tutor, course.tutor_id)
             if tutor is None:
-                raise ValueError(f"Tutor id {request.tutor_id} not found.")
+                raise ValueError(f"Tutor id {course.tutor_id} not found.")
 
             agent = VoiceTutorAgent(subject=subj, level=level, tutor=tutor, inst_lang=inst_lang)
             ai_request = '{"tts1:{"lang":"' + inst_lang.code.split("-")[0] + '","text":"' + request.text_1 + '"},"' + \
@@ -88,7 +98,7 @@ class TutoringService:
             inst_lang_code = inst_lang.code.split("-")[0]
             subject_lang_code = subj.code.split("-")[0]
 
-            answer = self._convertAiResult(ai_result.answer)
+            answer = self._convertAiResult(inst_lang_code=inst_lang_code, fragments=ai_result.answer)
 
             # Synthesize audio and phonemes
             audios = TextToSpeech.synthesize(
@@ -100,7 +110,7 @@ class TutoringService:
 
             # Prepare multipart fields
             fields = {
-                "question": self._convertAiResult(ai_result.question),
+                "question": self._convertAiResult(inst_lang_code=inst_lang_code, fragments=ai_result.question),
                 "answer": (None, answer)
             }
             for idx, item in enumerate(audios):
@@ -128,13 +138,12 @@ class TutoringService:
             raise HTTPException(status_code=500, detail="Internal Server Error")
         
 
-    def _convertAiResult(self, inst_lang_code: str, ai_result: ["TutoringService.AiResponseFragment"]) -> str:
+    def _convertAiResult(self, inst_lang_code: str, fragments: List[TutoringService.AiResponseFragment]) -> str:
         result = ""
-        for fragment in ai_result:
-            if fragment['lang'] == inst_lang_code:
-                # For English text, add it directly to the result
-                result += fragment['text']
+        for fragment in fragments:
+            if fragment.lang == inst_lang_code:
+                result += fragment.text
             else:
                 # For other languages, wrap it in <lang>...</lang> tags
-                result += f"<{fragment['lang']}>{fragment['text']}</{fragment['lang']}>"
+                result += f"<{fragment.lang}>{fragment.text}</{fragment.lang}>"
         return result
