@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.params import Depends
+from fastapi.responses import StreamingResponse
 from db.database import get_session
 
 from utils import get_app_logger
@@ -14,10 +15,7 @@ router = APIRouter()
 @router.post("/question")
 def ask_question(request: TutoringService.AskTutorRequest, session=Depends(get_session)):
     service = TutoringService(session=session)
-    response = service.askForTextResponse(request)
-    if not response:
-        raise HTTPException(status_code=500, detail="Could not get answer from tutor.")
-    return response
+    return StreamingResponse(service.askForTextResponse(request))
 
 
 @router.post("/audio/question")

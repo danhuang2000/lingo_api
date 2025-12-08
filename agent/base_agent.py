@@ -31,3 +31,10 @@ class BaseAgent:
         response = self.client.ask_ai(messages)
         logger.debug(f"AI Response: {response}")
         return response
+
+    
+    def ask_ai_stream(self, question: str):
+        user_message = BaseMessage(content=question, type="user")
+        messages = [self.system_message] + self.hist_messages + [user_message]
+        for chunk in self.client.ask_ai_stream(messages):
+            yield chunk

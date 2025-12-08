@@ -7,7 +7,7 @@ from entity import Subject, SubjectLevel, Tutor, InstructionLanguage, Topic, Use
 from .user_service import UserService
 from .cache_service import CacheService
 from utils import get_app_logger
-from agent import TutorAgent
+from agent import TextTutorAgent
 
 logger = get_app_logger(__name__)
 
@@ -209,10 +209,10 @@ class CourseService:
         tutor = next((t for t in self.get_tutors() if t.id == user_course.tutor_id), None)
         inst_lang = next((i for i in self.get_instruction_languages() if i.id == user_course.instruction_language_id), None)
 
-        lesson_type = TutorAgent.LessonType[request.lesson_type]
+        lesson_type = TextTutorAgent.LessonType[request.lesson_type]
 
         if subject and level and tutor and inst_lang:
-            agent = TutorAgent(subject=subject, level=level, tutor=tutor, inst_lang=inst_lang, topic=request.topic, lesson=lesson_type)
+            agent = TextTutorAgent(subject=subject, level=level, tutor=tutor, inst_lang=inst_lang, topic=request.topic, lesson=lesson_type)
             result = agent.ask_ai(question="Please give me a new set of exercises")
             data = json.loads(result)
             return JSONResponse(content=data)

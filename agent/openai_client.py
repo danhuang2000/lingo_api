@@ -13,18 +13,36 @@ class OpenAiClient(AiClient):
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY environment variable not set")
 
+
     def ask_ai(self, messages: list[BaseMessage]) -> str:
-        # Convert BaseMessage objects to OpenAI format
+        request = self._create_request(messages, stream=False)
+        response = openai.chat.completions.create(**request)
+
+        response_content = response.choices[0].message.content
+        logger.debug(f"Received response from OpenAI: {response_content}")
+        return response_content
+        
+
+    def ask_ai_stream(self, messages: list[BaseMessage]):
+        request = self._create_request(messages, stream=True)
+        response = openai.chat.completions.create(**request)
+
+        for chunk in response:
+            content = chunk.choices[0].delta.content
+            if content:
+                yield content
+
+
+    def _create_request(self, messages: list[BaseMessage], stream: bool = False) -> dict:
+        # Helper method to create OpenAI request payload
         openai_messages = [
             {"role": msg.type, "content": msg.content}
             for msg in messages
         ]
         logger.debug(f"Sending messages to OpenAI: {openai_messages}")  
-        response = openai.chat.completions.create(
-            model="gpt-4.1-mini",  # 4.1 mini model
-            messages=openai_messages,
-            temperature=0.7,
-        )
-        response_content = response.choices[0].message.content
-        logger.debug(f"Received response from OpenAI: {response_content}")
-        return response_content
+        return {
+            "model": "gpt-4.1-mini",
+            "messages": openai_messages,
+            "temperature": 0.7,
+            "stream": stream,
+        }

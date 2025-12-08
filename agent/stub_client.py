@@ -1,6 +1,10 @@
 from langchain.schema import BaseMessage
 from .ai_client import AiClient
 
+from utils import get_app_logger
+
+logger = get_app_logger(__name__)
+
 EXAMPLE_1 = """[
   {
     "words": [
@@ -210,6 +214,25 @@ AUDI_EXAMPLE_1 = """
 }
 """
 
+QNA_EXAMPLE_1 = """
+<es-MX>“Al”</es-MX> is a contraction in Spanish that combines the preposition <es-MX>“a”</es-MX> (meaning “to” or “at”) and the definite article <es-MX>“el”</es-MX> (meaning “the” for masculine singular nouns). It is used before masculine singular nouns to mean “to the” or “at the.”
+
+Here’s how you use <es-MX>“al”</es-MX>:
+
+1. When <es-MX>“a”</es-MX> (to/at) + <es-MX>“el”</es-MX> (the) appear together before a masculine singular noun, contract them into <es-MX>“al”</es-MX>.
+   
+   For example:
+   - <es-MX>Voy a el parque.</es-MX> → <es-MX>Voy al parque.</es-MX> (I am going to the park.)
+   - <es-MX>Llegué a el aeropuerto.</es-MX> → <es-MX>Llegué al aeropuerto.</es-MX> (I arrived at the airport.)
+
+2. Note that you do NOT contract <es-MX>“a”</es-MX> + <es-MX>“la”</es-MX>, <es-MX>“a”</es-MX> + <es-MX>“las”</es-MX>, or <es-MX>“a”</es-MX> + <es-MX>“los”</es-MX>. For example:
+   - <es-MX>Voy a la escuela.</es-MX> (I am going to the school.)
+   - <es-MX>Voy a las tiendas.</es-MX> (I am going to the stores.)
+   - <es-MX>Voy a los mercados.</es-MX> (I am going to the markets.)
+
+In summary, use <es-MX>“al”</es-MX> any time you have <es-MX>“a”</es-MX> + <es-MX>“el”</es-MX> before a masculine singular noun.
+"""
+
 class StubClient(AiClient):
     def ask_ai(self, messages: list[BaseMessage]) -> str:
         content = messages[0].content
@@ -222,3 +245,12 @@ class StubClient(AiClient):
         
         return "Buy Bobby a puppy. <zh>练习中文发音</zh> My mom may know."
         # return "Buy Bobby a puppy."
+        
+    def ask_ai_stream(self, messages: list[BaseMessage]):
+        lines = QNA_EXAMPLE_1.split("\n")
+        for line in lines:
+            if line.strip():
+                yield line.strip()
+                yield "\n"
+        yield "\n"
+        

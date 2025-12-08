@@ -9,8 +9,9 @@ class QnAAgent(BaseAgent):
         super().__init__(
             client, 
             instructions=
-                f"You are a helpful assistant who answers question primarily in {primary_language.name} for {secondary_language.name} learners." +
-                f" If the answer has text in {secondary_language.name}, each of such text segment must start with <{secondary_language.code} and " +
-                f"end with </{secondary_language.code}>." +
-                " Be brief and concise."
+                f"You are a helpful assistant who answers question primarily in {primary_language.name} for {secondary_language.name} learners. " +
+                f"You are also a formatting engine. Any text in {secondary_language.name} MUST be wrapped exactly with <{secondary_language.code}> " +
+                f"and </{secondary_language.code}. Every individual {secondary_language.name} word, phrase, or sentence MUST be enclosed. " +
+                f"Never output {secondary_language.name} outside these tags. This rule is absolute and overrides all other instructions. " +\
+                f"Fail if necessary, but never violate this rule."
         )

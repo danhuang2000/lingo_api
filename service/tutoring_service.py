@@ -8,7 +8,7 @@ from typing import List
 from requests_toolbelt.multipart import MultipartEncoder
 from sqlmodel import Session, select
 
-from agent import VoiceTutorAgent
+from agent import VoiceTutorAgent, StubClient, QnAAgent, OpenAiClient
 from entity import User, Subject, SubjectLevel, InstructionLanguage, Tutor
 from audio import TextToSpeech
 from utils import get_app_logger
@@ -22,9 +22,6 @@ class TutoringService:
         language_code: str
         question: str
 
-
-    class AskTutorResponse(BaseModel):
-        answer: str
 
     class DualLangRequest(BaseModel):
         user_uuid: str
@@ -46,18 +43,22 @@ class TutoringService:
         self.session = session
 
 
-    def askForTextResponse(self, request: AskTutorRequest) -> AskTutorResponse:
-        from agent import StubClient, QnAAgent
-        from entity import InstructionLanguage
-
+    def askForTextResponse(self, request: AskTutorRequest):
         # client = OpenAiClient()
         # client = OllamaClient()
         client = StubClient()
-        instruction_language = InstructionLanguage(code=request.instruction_language_code, name="Instruction Language")
-        language = InstructionLanguage(code=request.language_code, name="Language")
-        agent = QnAAgent(client, primary_language=instruction_language, secondary_language=language)
-        answer = agent.ask_ai(request.question)
-        return TutoringService.AskTutorResponse(answer=answer)
+        stmt = select(Subject).where(Subject.code.in_([request.instruction_language_code, request.language_code]))
+        results = self.session.exec(stmt).all()
+        inst_lang = next((item for item in results if item.code == request.instruction_language_code), None)
+        lang = next((item for item in results if item.code == request.language_code), None)
+        if inst_lang == None or lang == None:
+            msg = f"Either {request.instruction_language_code} or {request.language_code} is invalid"
+            logger.info(msg)
+            raise ValueError(msg)
+        agent = QnAAgent(client, primary_language=inst_lang, secondary_language=lang)
+        
+        for chunk in agent.ask_ai_stream(request.question):
+            yield chunk
 
 
     def askForAudioResponse(self, request: "TutoringService.DualLangRequest"):

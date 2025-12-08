@@ -12,4 +12,9 @@ class OllamaClient(AiClient):
     def ask_ai(self, messages: list[BaseMessage]) -> str:
         response = OllamaClient.__llm.invoke(messages)
         return response.content
+    
+    def ask_ai_stream(self, messages: list[BaseMessage]):
+        response_stream = OllamaClient.__llm.invoke_stream(messages)
+        for chunk in response_stream:
+            yield chunk.content
 
