@@ -8,7 +8,8 @@ from typing import List
 from requests_toolbelt.multipart import MultipartEncoder
 from sqlmodel import Session, select
 
-from agent import VoiceTutorAgent, StubClient, QnAAgent, OpenAiClient
+from agent import VoiceTutorAgent, QnAAgent
+from agent.client import OllamaClient, OpenAiClient, StubClient
 from entity import User, Subject, SubjectLevel, InstructionLanguage, Tutor
 from audio import TextToSpeech
 from utils import get_app_logger

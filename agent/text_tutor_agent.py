@@ -1,8 +1,8 @@
 from enum import Enum
 from string import Template
 from .base_agent import BaseAgent
-from .openai_client import OpenAiClient
-from .stub_client import StubClient
+from .client.openai_client import OpenAiClient
+from .client.stub_client import StubClient
 from utils import get_app_logger
 from entity import Subject, SubjectLevel, Tutor, InstructionLanguage
 

@@ -253,4 +253,3 @@ class StubClient(AiClient):
                 yield line.strip()
                 yield "\n"
         yield "\n"
-        

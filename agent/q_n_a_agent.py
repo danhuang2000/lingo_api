@@ -1,6 +1,6 @@
 
 from .base_agent import BaseAgent
-from .ai_client import AiClient
+from .client.ai_client import AiClient
 from entity import Subject
 
 # TODO remove this file as it will be replaced by VoiceTutorAgent

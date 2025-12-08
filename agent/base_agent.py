@@ -1,6 +1,6 @@
 from utils import get_app_logger
 from langchain.schema import BaseMessage
-from .ai_client import AiClient
+from .client.ai_client import AiClient
 
 
 logger = get_app_logger(__name__)
