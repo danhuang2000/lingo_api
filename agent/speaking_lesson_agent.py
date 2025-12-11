@@ -26,7 +26,7 @@ SPANISH_EXAMPLE='Necesito\tneθeˈsito\tagua\taɣwa\t\r\nI need water.\r\n'
 JAPANESE_PRONUNCIATION='romanji'
 JAPANESE_EXAMPLE='りんご\tringo\tを\to\t食べる\ttaberu\t.\r\nI eat an apple.\r\n'
 
-class TextTutorAgent(BaseAgent):
+class SpeakingLessonAgent(BaseAgent):
     class LessonType(Enum):
         speaking = 1
         reading  = 2
