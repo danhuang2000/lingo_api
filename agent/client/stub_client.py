@@ -233,6 +233,10 @@ Here’s how you use <es-MX>“al”</es-MX>:
 In summary, use <es-MX>“al”</es-MX> any time you have <es-MX>“a”</es-MX> + <es-MX>“el”</es-MX> before a masculine singular noun.
 """
 
+QNA_EXAMPLE_2 = """
+What is <es-MX>negitio</es-MX>?\t<es-MX>Negotio</es-MX> means business.
+"""
+
 class StubClient(AiClient):
     def ask_ai(self, messages: list[BaseMessage]) -> str:
         content = messages[0].content
@@ -247,7 +251,8 @@ class StubClient(AiClient):
         # return "Buy Bobby a puppy."
         
     def ask_ai_stream(self, messages: list[BaseMessage]):
-        lines = QNA_EXAMPLE_1.split("\n")
+        content = messages[0].content
+        lines = QNA_EXAMPLE_2.split("\n") if content.find("tab character") > 0 else QNA_EXAMPLE_1.split("\n")
         for line in lines:
             if line.strip():
                 yield line.strip()

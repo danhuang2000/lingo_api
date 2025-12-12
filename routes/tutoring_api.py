@@ -12,14 +12,14 @@ logger = get_app_logger(__name__)
 router = APIRouter()
 
 
-@router.post("/question")
+@router.post("/text/question")
 def ask_question(request: TutoringService.AskTutorRequest, session=Depends(get_session)):
     service = TutoringService(session=session)
     return StreamingResponse(service.askForTextResponse(request))
 
 
 @router.post("/audio/question")
-def ask_question_with_audio(request: TutoringService.DualLangRequest, session=Depends(get_session)):
+def ask_question_with_audio(request: TutoringService.AskTutorRequest, session=Depends(get_session)):
     service = TutoringService(session=session)
     response = service.askForAudioResponse(request)
     if not response:

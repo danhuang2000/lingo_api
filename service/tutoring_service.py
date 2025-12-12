@@ -8,7 +8,7 @@ from typing import List
 from requests_toolbelt.multipart import MultipartEncoder
 from sqlmodel import Session, select
 
-from agent import VoiceTutorAgent, QnAAgent
+from agent import VoiceTutorAgent, TextTutorAgent
 from agent.client import OllamaClient, OpenAiClient, StubClient
 from entity import User, Subject, SubjectLevel, InstructionLanguage, Tutor
 from audio import TextToSpeech
@@ -19,17 +19,10 @@ logger = get_app_logger(__name__)
 
 class TutoringService:
     class AskTutorRequest(BaseModel):
-        instruction_language_code: str
-        language_code: str
-        question: str
-
-
-    class DualLangRequest(BaseModel):
         user_uuid: str
         course_id: int
         text_1: str
         text_2: str
-
 
     class AiResponseFragment(BaseModel):
         lang: str
@@ -45,55 +38,21 @@ class TutoringService:
 
 
     def askForTextResponse(self, request: AskTutorRequest):
-        # client = OpenAiClient()
-        # client = OllamaClient()
-        client = StubClient()
-        stmt = select(Subject).where(Subject.code.in_([request.instruction_language_code, request.language_code]))
-        results = self.session.exec(stmt).all()
-        inst_lang = next((item for item in results if item.code == request.instruction_language_code), None)
-        lang = next((item for item in results if item.code == request.language_code), None)
-        if inst_lang == None or lang == None:
-            msg = f"Either {request.instruction_language_code} or {request.language_code} is invalid"
-            logger.info(msg)
-            raise ValueError(msg)
-        agent = QnAAgent(client, primary_language=inst_lang, secondary_language=lang)
+        try:
+            subj, level, inst_lang, tutor, ai_request = self._getCourseInfo(request)
+            agent = TextTutorAgent(subject=subj, level=level, tutor=tutor, inst_lang=inst_lang)
         
-        for chunk in agent.ask_ai_stream(request.question):
-            yield chunk
+            for chunk in agent.ask_ai_stream(ai_request):
+                yield chunk
+        except Exception as e:
+            logger.error(f"Error processing QnA: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
     def askForAudioResponse(self, request: "TutoringService.DualLangRequest"):
         try:
-            logger.info(f"user_uuid={request.user_uuid} course_id={request.course_id}\n{request.text_1}\n{request.text_2}")
-
-            stmt = select(User).where(User.uuid == request.user_uuid)
-            user = self.session.exec(stmt).first()
-            if user is None:
-                raise ValueError(f"{request.user_uuid} user not found.")
-
-            course = next((c for c in user.courses if c.course_id == request.course_id), None)
-            if course is None:
-                raise ValueError(f"Course id {request.course_id} not found for user {request.user_uuid}.")
-
-            subj = self.session.get(Subject, course.course.subject_id)
-            if subj is None:
-                raise ValueError(f"Subject id {course.course.subject_id} not found.")
-            
-            level = self.session.get(SubjectLevel, course.course.subject_level_id)
-            if level is None:
-                raise ValueError(f"Subject level id {course.course.subject_level_id} not found.")
-            
-            inst_lang = self.session.get(InstructionLanguage, course.instruction_language_id)
-            if inst_lang is None:
-                raise ValueError(f"Instruction language id {course.instruction_language_id} not found.")
-            
-            tutor = self.session.get(Tutor, course.tutor_id)
-            if tutor is None:
-                raise ValueError(f"Tutor id {course.tutor_id} not found.")
-
+            subj, level, inst_lang, tutor, ai_request = self._getCourseInfo(request)
             agent = VoiceTutorAgent(subject=subj, level=level, tutor=tutor, inst_lang=inst_lang)
-            ai_request = '{"tts1:{"lang":"' + inst_lang.code.split("-")[0] + '","text":"' + request.text_1 + '"},"' + \
-                        '{tts2:{"lang":"' + subj.code.split("-")[0] + '","text":"' + request.text_2 + '"}}'
             result = agent.ask_ai(ai_request)
             logger.info(f"AI Answer: {result}")
             ai_result = TutoringService.AiResponse.model_validate_json(result)
@@ -138,7 +97,41 @@ class TutoringService:
         except Exception as e:
             logger.error(f"Error processing QnA: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+    def _getCourseInfo(self, request: AskTutorRequest):
+        logger.info(f"user_uuid={request.user_uuid} course_id={request.course_id}\n{request.text_1}\n{request.text_2}")
+
+        stmt = select(User).where(User.uuid == request.user_uuid)
+        user = self.session.exec(stmt).first()
+        if user is None:
+            raise ValueError(f"{request.user_uuid} user not found.")
+
+        course = next((c for c in user.courses if c.course_id == request.course_id), None)
+        if course is None:
+            raise ValueError(f"Course id {request.course_id} not found for user {request.user_uuid}.")
+
+        subj = self.session.get(Subject, course.course.subject_id)
+        if subj is None:
+            raise ValueError(f"Subject id {course.course.subject_id} not found.")
         
+        level = self.session.get(SubjectLevel, course.course.subject_level_id)
+        if level is None:
+            raise ValueError(f"Subject level id {course.course.subject_level_id} not found.")
+        
+        inst_lang = self.session.get(InstructionLanguage, course.instruction_language_id)
+        if inst_lang is None:
+            raise ValueError(f"Instruction language id {course.instruction_language_id} not found.")
+        
+        tutor = self.session.get(Tutor, course.tutor_id)
+        if tutor is None:
+            raise ValueError(f"Tutor id {course.tutor_id} not found.")
+        
+        ai_request = '{"tts1:{"lang":"' + inst_lang.code.split("-")[0] + '","text":"' + request.text_1 + '"},"' + \
+                     '{tts2:{"lang":"' + subj.code.split("-")[0] + '","text":"' + request.text_2 + '"}}'
+
+        return subj, level, inst_lang, tutor, ai_request
+
 
     def _convertAiResult(self, inst_lang_code: str, fragments: List[TutoringService.AiResponseFragment]) -> str:
         result = ""
