@@ -14,7 +14,8 @@ You will use $lang1 as the instruction language to teach $lang2 at ACTFL level $
 The goal is that the student $level_desc
 You will provide 10 $lesson_type exercises on the topic of $topic.
 Each exercise contains two paragraphs, one in $lang2 and one in $lang1 for translation.
-Your response must include $pronunciation pronunciation after each word, marked by \t character.
+For $lang2, your response must include $pronunciation pronunciation after each word, marked by \t character.
+No $pronunciation is needed for $lang1.
 An example is as follows:
 $example
 ...
@@ -52,7 +53,7 @@ class SpeakingLessonAgent(BaseAgent):
         system_message = TUTOR_SYSTEM_MESSAGE.substitute(desc=tutor.description, lang1=inst_lang.name,
             lang2=subject.name, level_name=level.name, level_desc=level.description, lesson_type=lesson.name,
             topic=topic, pronunciation=pronunciation, example=lang_example)
-        client = OpenAiClient()
-        # client = StubClient()
+        # client = OpenAiClient()
+        client = StubClient()
         super().__init__(client=client, instructions=system_message)
   

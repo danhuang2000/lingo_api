@@ -19,7 +19,7 @@ class OpenAiClient(AiClient):
         response = openai.chat.completions.create(**request)
 
         response_content = response.choices[0].message.content
-        logger.debug(f"Received response from OpenAI: {response_content}")
+        logger.debug(f"(OpenAI) RECV: {response_content}")
         return response_content
         
 
@@ -27,10 +27,20 @@ class OpenAiClient(AiClient):
         request = self._create_request(messages, stream=True)
         response = openai.chat.completions.create(**request)
 
+        full_text = []
+
         for chunk in response:
             content = chunk.choices[0].delta.content
             if content:
-                yield content
+                full_text.append(content)
+                yield content 
+
+        logger.debug(f"(OpenAI) RECV (streamed): {''.join(full_text)}")
+
+        # for chunk in response:
+        #     content = chunk.choices[0].delta.content
+        #     if content:
+        #         yield content
 
 
     def _create_request(self, messages: list[BaseMessage], stream: bool = False) -> dict:

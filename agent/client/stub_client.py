@@ -237,6 +237,56 @@ QNA_EXAMPLE_2 = """
 What is <es-MX>negitio</es-MX>?\t<es-MX>Negotio</es-MX> means business.
 """
 
+SPEAKING_EXAMPLE = """
+¡Claro! Here are 10 speaking exercises on the topic of Describing the Weather, perfect for practicing short social interactions. Each exercise has two paragraphs: one in Spanish with IPA pronunciation and one in English for translation.
+
+1.
+El\tɛl\tclima\tˈklima\tes\tes\tagradable\taɣɾaˈðaβle\thoy\toj.
+The weather is pleasant today.
+
+2.
+Hace\tˈaθe\tfrío\tˈfɾio\ten\ten\tla\tla\tciudad\tθjuˈðað\testa\tˈesta\tmañana\tmaˈɲana. 
+It's cold  in the city this morning.
+
+3.
+¿Te\tte\tgusta\tˈɡusta\tel\tel\tclima\tˈklima\tcaliente\tkaˈljente\ten\ten\tverano\tβeˈɾano?
+Do you like hot weather in  summer?
+
+4.
+Hoy\toj\thay\taj\tuna\tˈuna\ttormenta\ttoɾˈmenta\tcon\tkɔn\tmucha\tˈmutʃa\tlluvia\tˈʝuβja.
+Today there's a storm with a lot of rain.
+
+5.
+El\tɛl\tsol\tsoʊl\tbrilla\tˈbɾiʝa\ten\ten\tel\tɛl\tcielo\tˈsjelo\tazul\taˈθul.
+The sun shines in the blue sky.
+
+6.
+¿Prefieres\tpɾeˈfjɛɾes\tel\tel\tclima\tˈklima\tfrío\tˈfɾio\to\to\tcalor\tkaˈloɾ?
+Do\tdu\tyou\tju\tprefer\tprɪˈfɝ\tcold\tkoʊld\tor\tɔr\thot\thɑt\tweather\tˈwɛðər?
+Do you prefer cold orr hot weather?
+
+
+7.
+En\ten\tel\tɛl\tinvierno\timˈβjeɾno\thace\tˈaθe\tmucho\tˈmutʃo\tfrío\tˈfɾio.    
+In the winter it's very cold.
+
+8.
+La\tla\ttemperatura\ttempeɾaˈtuɾa\tes\tes\tsuave\tˈswaβe\ten\ten\tla\tla\ttarde\tˈtaɾðe.
+The temperaturee is mild in the afternoon.
+
+9.
+¿Cómo\tˈkomo\testá\tesˈta\tel\tel\tclima\tˈklima\tahora\taˈoɾa? 
+How is the weather now?
+
+10.
+Por\tpoɾ\tla\tla\tnoche\tˈnotʃe\thace\tˈaθe\tfrío\tˈfɾio\ty\ti\tpuede\tˈpweðe\tnevar\tneˈβaɾ.   
+At night it's cold and it can can snow.
+
+¡Practiquemos! Repeat each sentence aloud and try making your own weather descriptions!
+133 substitutions on 11 lines                                                                                                                    
+
+"""
+
 class StubClient(AiClient):
     def ask_ai(self, messages: list[BaseMessage]) -> str:
         content = messages[0].content
@@ -252,7 +302,14 @@ class StubClient(AiClient):
         
     def ask_ai_stream(self, messages: list[BaseMessage]):
         content = messages[0].content
-        lines = QNA_EXAMPLE_2.split("\n") if content.find("tab character") > 0 else QNA_EXAMPLE_1.split("\n")
+        lines = ""
+        if content.find("speaking exercises") > 0:
+            lines = SPEAKING_EXAMPLE.split("\n")
+        elif content.find("tab character") > 0:
+            lines = QNA_EXAMPLE_2.split("\n")
+        else:
+            lines = QNA_EXAMPLE_1.split("\n")
+
         for line in lines:
             if line.strip():
                 yield line.strip()

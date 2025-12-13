@@ -36,5 +36,6 @@ class BaseAgent:
     def ask_ai_stream(self, question: str):
         user_message = BaseMessage(content=question, type="user")
         messages = [self.system_message] + self.hist_messages + [user_message]
+        logger.debug("AI response streaming...")
         for chunk in self.client.ask_ai_stream(messages):
             yield chunk
