@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from fastapi.params import Depends
+from fastapi.responses import StreamingResponse
 from db.database import get_session
 
 from entity import User
@@ -63,4 +64,4 @@ def get_user_classes(user: SecurityService.UserUuidInfo, session=Depends(get_ses
 @router.post("/lesson/speaking")
 def get_speaking_lesson(request: CourseService.SpeakingLessonRequest, session=Depends(get_session)):
     service = CourseService(session=session)
-    return service.get_speaking_lesson(request=request)
+    return StreamingResponse(service.get_speaking_lesson(request=request), media_type="text/plain")

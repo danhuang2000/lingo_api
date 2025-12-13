@@ -2,7 +2,7 @@ import json
 from typing import List
 from pydantic import BaseModel
 from sqlmodel import Session, and_, select
-from fastapi.responses import JSONResponse
+from fastapi import HTTPException
 from entity import Subject, SubjectLevel, Tutor, InstructionLanguage, Topic, UserCourse, Course
 from .user_service import UserService
 from .cache_service import CacheService
@@ -213,11 +213,13 @@ class CourseService:
 
         if subject and level and tutor and inst_lang:
             agent = SpeakingLessonAgent(subject=subject, level=level, tutor=tutor, inst_lang=inst_lang, topic=request.topic, lesson=lesson_type)
-            result = agent.ask_ai(question="Please give me a new set of exercises")
-            data = json.loads(result)
-            return JSONResponse(content=data)
+            try:
+                for chunk in agent.ask_ai_stream("Please give me a new set of exercises"):
+                    yield chunk
+            except Exception as e:
+                logger.error(f"Error processing QnA: {e}")
+                raise HTTPException(status_code=500, detail="Internal Server Error")
         else:
             logger.info(f"Invalid request: {json.dumps(request)}")
-
-        return None
+            raise HTTPException(status_code=400, detail="Bad Request")
         
