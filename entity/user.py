@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlmodel import Field, SQLModel, Relationship
 
 from .user_course import UserCourse
-from .user_topic import UserTopic
+from .exercise_set import ExerciseSet
 from .device import Device
 
 
@@ -21,7 +21,7 @@ class User(SQLModel, table=True):
         sa_relationship_kwargs={"lazy": "select"}  # Lazy loading
     )
 
-    topics: List[UserTopic] = Relationship(
+    exercises: List[ExerciseSet] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"lazy": "select"}  # Lazy loading
     )

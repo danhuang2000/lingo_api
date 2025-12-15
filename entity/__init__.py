@@ -4,10 +4,10 @@ from .subject_level import SubjectLevel
 from .subject_level_translation import SubjectLevelTranslation
 from .topic import Topic
 from .tutor import Tutor
+from .course import Course
 from .user import User
 from .device import Device
 from .user_course import UserCourse
-from .user_topic import UserTopic
-from .course import Course
+from .exercise_set import ExerciseSet
 from .exercise_result import ExerciseResult
 from .instruction_language import InstructionLanguage

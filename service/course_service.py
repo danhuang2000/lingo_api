@@ -3,7 +3,7 @@ from typing import List
 from pydantic import BaseModel
 from sqlmodel import Session, and_, select
 from fastapi import HTTPException
-from entity import Subject, SubjectLevel, Tutor, InstructionLanguage, Topic, UserCourse, Course
+from entity import Subject, SubjectLevel, Tutor, InstructionLanguage, Topic, UserCourse, Course, ExerciseSet
 from .user_service import UserService
 from .cache_service import CacheService
 from utils import get_app_logger
@@ -33,8 +33,16 @@ class CourseService:
         user_uuid: str
         course_id: int
         instruction_language_id: int
-        topic: str
+        topic_id: int
         lesson_type: str
+
+    class ExerciseResultData(BaseModel):
+        user_uuid: str
+        course_id: int
+        topic_id: int
+        lesson_type: str
+        score: float
+        details: dict
 
 
     def __init__(self, session: Session):
@@ -208,12 +216,15 @@ class CourseService:
         level = next((l for l in self.get_subject_levels(level_category) if l.id == course.subject_level_id), None)
         tutor = next((t for t in self.get_tutors() if t.id == user_course.tutor_id), None)
         inst_lang = next((i for i in self.get_instruction_languages() if i.id == user_course.instruction_language_id), None)
+        topic = next((tp for tp in self.get_all_topics() if tp.id == request.topic_id), None)
 
         lesson_type = SpeakingLessonAgent.LessonType[request.lesson_type]
 
         if subject and level and tutor and inst_lang:
-            agent = SpeakingLessonAgent(subject=subject, level=level, tutor=tutor, inst_lang=inst_lang, topic=request.topic, lesson=lesson_type)
+            agent = SpeakingLessonAgent(subject=subject, level=level, tutor=tutor, inst_lang=inst_lang, topic=topic.name, lesson=lesson_type)
             try:
+                exercise_set = self._create_exercise_set(user_id=user.id, course_id=course.id, topic_id=topic.id)
+                yield f'{{"exercise_set_id":{exercise_set.id}}}\n'
                 for chunk in agent.ask_ai_stream("Please give me a new set of exercises"):
                     yield chunk
             except Exception as e:
@@ -223,3 +234,17 @@ class CourseService:
             logger.info(f"Invalid request: {json.dumps(request)}")
             raise HTTPException(status_code=400, detail="Bad Request")
         
+
+    def _create_exercise_set(self, user_id: int, course_id: int, topic_id: int) -> ExerciseSet:
+        exercise_set = ExerciseSet(
+            user_id=user_id,
+            course_id=course_id,
+            topic_id=topic_id,
+            is_active=True,
+            exercise_count=0,
+            correct_percentage=0.0
+        )
+        self.session.add(exercise_set)
+        self.session.commit()
+        self.session.refresh(exercise_set)
+        return exercise_set

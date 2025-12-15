@@ -24,6 +24,9 @@ $example
 SPANISH_PRONUNCIATION='IPA'
 SPANISH_EXAMPLE='Necesito\tneθeˈsito\tagua\taɣwa\t\r\nI need water.\r\n'
 
+ITALIAN_PRONUNCIATION='IPA'
+ITALIAN_EXAMPLE='Ho\to\tbisogno\tbiˈzoɲɲo\tdi\tdi\tacqua\tˈakkwa\t.\r\nI need water.\r\n'
+
 JAPANESE_PRONUNCIATION='romanji'
 JAPANESE_EXAMPLE='りんご\tringo\tを\to\t食べる\ttaberu\t.\r\nI eat an apple.\r\n'
 
@@ -47,6 +50,9 @@ class SpeakingLessonAgent(BaseAgent):
         elif subject.code == 'es-MX':
             lang_example = SPANISH_EXAMPLE
             pronunciation = SPANISH_PRONUNCIATION
+        elif subject.code == 'it-IT':
+            lang_example = ITALIAN_EXAMPLE
+            pronunciation = ITALIAN_PRONUNCIATION
         else:
             raise ValueError(f"{subject.name} not yet supported")
 

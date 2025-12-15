@@ -6,7 +6,8 @@ from sqlmodel import Field, SQLModel, Relationship
 class ExerciseResult(SQLModel, table=True):
     __tablename__ = "exercise_result"
     id: int | None = Field(default=None, primary_key=True)
-    user_topic_id: int = Field(foreign_key="user_topic.id")
+    exercise_set_id: int = Field(foreign_key="exercise_set.id")
+    index: int
     question: str
     answer: str
     score: int

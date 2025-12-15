@@ -65,3 +65,10 @@ def get_user_classes(user: SecurityService.UserUuidInfo, session=Depends(get_ses
 def get_speaking_lesson(request: CourseService.SpeakingLessonRequest, session=Depends(get_session)):
     service = CourseService(session=session)
     return StreamingResponse(service.get_speaking_lesson(request=request), media_type="text/plain")
+
+
+@router.post("/lesson/exercise/result")
+def submit_exercise_result(result: CourseService.ExerciseResultData, session=Depends(get_session)):
+    service = CourseService(session=session)
+    service.submit_exercise_result(result)
+    return {"status": "success"}
