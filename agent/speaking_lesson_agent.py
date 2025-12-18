@@ -12,7 +12,7 @@ TUTOR_SYSTEM_MESSAGE=Template(
 """You are a helpful language tutor. You are $desc
 You will use $lang1 as the instruction language to teach $lang2 at ACTFL level $level_name.
 The goal is that the student $level_desc
-You will provide 10 $lesson_type exercises on the topic of $topic.
+You will provide $count speaking exercises on the topic of $topic.
 Each exercise contains two paragraphs, one in $lang2 and one in $lang1 for translation.
 For $lang2, your response must include $pronunciation pronunciation after each word, marked by \t character.
 No $pronunciation is needed for $lang1.
@@ -31,18 +31,13 @@ JAPANESE_PRONUNCIATION='romanji'
 JAPANESE_EXAMPLE='りんご\tringo\tを\to\t食べる\ttaberu\t.\r\nI eat an apple.\r\n'
 
 class SpeakingLessonAgent(BaseAgent):
-    class LessonType(Enum):
-        speaking = 1
-        reading  = 2
-        writing  = 3
-
     def __init__(self, 
                 subject: Subject,
                 level: SubjectLevel,
                 tutor: Tutor,
                 inst_lang: InstructionLanguage,
                 topic: str,
-                lesson: LessonType):
+                exercise_count: int =10):
         
         if subject.code == 'ja-JP':
             lang_example = JAPANESE_EXAMPLE
@@ -57,7 +52,7 @@ class SpeakingLessonAgent(BaseAgent):
             raise ValueError(f"{subject.name} not yet supported")
 
         system_message = TUTOR_SYSTEM_MESSAGE.substitute(desc=tutor.description, lang1=inst_lang.name,
-            lang2=subject.name, level_name=level.name, level_desc=level.description, lesson_type=lesson.name,
+            lang2=subject.name, level_name=level.name, level_desc=level.description, count=exercise_count,
             topic=topic, pronunciation=pronunciation, example=lang_example)
         # client = OpenAiClient()
         client = StubClient()

@@ -1,14 +1,22 @@
 from datetime import datetime, timezone
 from typing import Optional
+from enum import Enum
+from sqlalchemy import Enum as SAEnum
 from sqlmodel import Field, Relationship, SQLModel, Column, Integer, ForeignKey, DateTime
 
 class ExerciseSet(SQLModel, table=True):
     __tablename__ = 'exercise_set'
+
+    class ExerciseTypeEnum(str, Enum):
+        speaking  = "speaking"
+        writing   = "writing"
+        listening = "listening"
+
     id: int = Field(default=None, primary_key=True)
     user_id: int = Field(default=None, foreign_key="user.id")
     course_id: int = Field(default=None, foreign_key="course.id")
     topic_id: int = Field(default=None, foreign_key="topic.id")
-    name: str | None = None
+    exercise_type: Optional[ExerciseTypeEnum] = Field(sa_column=SAEnum(ExerciseTypeEnum, name="exercise_type", nullable=True))
     exercise_count: int = Field(default=0)
     correct_percentage: float = Field(default=0.0)
     create_date: datetime = Field(

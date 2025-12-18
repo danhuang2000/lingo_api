@@ -3,7 +3,8 @@ from typing import List
 from pydantic import BaseModel
 from sqlmodel import Session, and_, select
 from fastapi import HTTPException
-from entity import Subject, SubjectLevel, Tutor, InstructionLanguage, Topic, UserCourse, Course, ExerciseSet
+from entity import Subject, SubjectLevel, Tutor, InstructionLanguage, Topic, UserCourse, Course
+from entity import ExerciseSet, ExerciseResult
 from .user_service import UserService
 from .cache_service import CacheService
 from utils import get_app_logger
@@ -36,13 +37,20 @@ class CourseService:
         topic_id: int
         lesson_type: str
 
-    class ExerciseResultData(BaseModel):
+    class QnAResult(BaseModel):
+        id: int
+        question: str
+        answer: str
+        score: int
+
+    class ExerciseResultRequest(BaseModel):
         user_uuid: str
-        course_id: int
-        topic_id: int
-        lesson_type: str
-        score: float
-        details: dict
+        exercise_set_id: int
+        result: List["QnAResult"]
+     
+    class ExerciseResultResponse(BaseModel):
+        exercise_set_id: int
+        correct_percentage: float
 
 
     def __init__(self, session: Session):
@@ -212,19 +220,18 @@ class CourseService:
         course = user_course.course
 
         level_category = 1 # TODO we hard code the subject category
+        exercise_count = 10
         subject = next((s for s in self.get_all_subjects() if s.id == course.subject_id), None)
         level = next((l for l in self.get_subject_levels(level_category) if l.id == course.subject_level_id), None)
         tutor = next((t for t in self.get_tutors() if t.id == user_course.tutor_id), None)
         inst_lang = next((i for i in self.get_instruction_languages() if i.id == user_course.instruction_language_id), None)
         topic = next((tp for tp in self.get_all_topics() if tp.id == request.topic_id), None)
 
-        lesson_type = SpeakingLessonAgent.LessonType[request.lesson_type]
-
         if subject and level and tutor and inst_lang:
-            agent = SpeakingLessonAgent(subject=subject, level=level, tutor=tutor, inst_lang=inst_lang, topic=topic.name, lesson=lesson_type)
+            agent = SpeakingLessonAgent(subject=subject, level=level, tutor=tutor, inst_lang=inst_lang, topic=topic.name, exercise_count=exercise_count)
             try:
-                exercise_set = self._create_exercise_set(user_id=user.id, course_id=course.id, topic_id=topic.id)
-                yield f'{{"exercise_set_id":{exercise_set.id}}}\n'
+                exercise_set = self._create_exercise_set(user_id=user.id, course_id=course.id, topic_id=topic.id, lesson_type=request.lesson_type)
+                yield f'{{"exercise_set_id":{exercise_set.id},"count":{exercise_count}}}\n'
                 for chunk in agent.ask_ai_stream("Please give me a new set of exercises"):
                     yield chunk
             except Exception as e:
@@ -233,14 +240,60 @@ class CourseService:
         else:
             logger.info(f"Invalid request: {json.dumps(request)}")
             raise HTTPException(status_code=400, detail="Bad Request")
-        
 
-    def _create_exercise_set(self, user_id: int, course_id: int, topic_id: int) -> ExerciseSet:
+
+    def submit_exercise_result(self, data: ExerciseResultRequest) -> ExerciseResultResponse:
+        user = self.user_service.get_user_by_uuid(data.user_uuid)
+        if not user:
+            logger.info(f"Can't find user {data.user_uuid}")
+            raise HTTPException(status_code=400, detail="Bad Request")
+        
+        stmt = select(ExerciseSet).where(
+            and_(
+                ExerciseSet.id == data.exercise_set_id,
+                ExerciseSet.user_id == user.id
+            )
+        )
+        exercise_set = self.session.exec(stmt).first()
+        if not exercise_set:
+            logger.info(f"Can't find exercise set id={data.exercise_set_id} for user id={user.id}")
+            raise HTTPException(status_code=400, detail="Bad Request")
+
+        total_score = 0
+        for result in data.result:
+            from entity.exercise_result import ExerciseResult
+            exercise_result = ExerciseResult(
+                exercise_set_id=data.exercise_set_id,
+                index=result.id,
+                question=result.question,
+                answer=result.answer,
+                score=result.score
+            )
+            self.session.add(exercise_result)
+            total_score += result.score
+
+        average_score = total_score / len(data.result) if data.result else 0.0
+        exercise_set.exercise_count = len(data.result)
+        exercise_set.correct_percentage = average_score
+        self.session.add(exercise_set)
+        self.session.commit()
+
+        logger.debug(f"User {user.id} submitted exercise set id={data.exercise_set_id} with score={average_score}")
+
+        response = CourseService.ExerciseResultResponse(
+            exercise_set_id=exercise_set.id,
+            correct_percentage=average_score
+        )
+
+        return response
+
+
+    def _create_exercise_set(self, user_id: int, course_id: int, topic_id: int, lesson_type: str) -> ExerciseSet:
         exercise_set = ExerciseSet(
             user_id=user_id,
             course_id=course_id,
             topic_id=topic_id,
-            is_active=True,
+            exercise_type=lesson_type,
             exercise_count=0,
             correct_percentage=0.0
         )

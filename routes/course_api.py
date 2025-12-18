@@ -68,7 +68,6 @@ def get_speaking_lesson(request: CourseService.SpeakingLessonRequest, session=De
 
 
 @router.post("/lesson/exercise/result")
-def submit_exercise_result(result: CourseService.ExerciseResultData, session=Depends(get_session)):
+def submit_exercise_result(result: CourseService.ExerciseResultRequest, session=Depends(get_session)):
     service = CourseService(session=session)
-    service.submit_exercise_result(result)
-    return {"status": "success"}
+    return service.submit_exercise_result(result)
