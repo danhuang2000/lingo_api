@@ -289,6 +289,8 @@ At night it's cold and it can can snow.
 
 class StubClient(AiClient):
     def ask_ai(self, messages: list[BaseMessage]) -> str:
+        self._print_messages(messages)
+
         content = messages[0].content
         if content.find("Spanish") > 0:
             if content.find("from the same audio input") > 0:
@@ -300,7 +302,9 @@ class StubClient(AiClient):
         return "Buy Bobby a puppy. <zh>练习中文发音</zh> My mom may know."
         # return "Buy Bobby a puppy."
         
+
     def ask_ai_stream(self, messages: list[BaseMessage]):
+        self._print_messages(messages)
         content = messages[0].content
         lines = ""
         if content.find("speaking exercises") > 0:
@@ -315,3 +319,9 @@ class StubClient(AiClient):
                 yield line.strip()
                 yield "\n"
         yield "\n"
+
+
+    def _print_messages(self, messages: list[BaseMessage]):
+        logger.debug("StubClient received messages:")
+        for msg in messages:
+            logger.debug(f"{msg.type}: {msg.content}")

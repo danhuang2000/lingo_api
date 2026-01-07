@@ -1,14 +1,16 @@
 
 from __future__ import annotations
+import os
 import json
+import redis
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 from fastapi import HTTPException
-from typing import List
+from typing import List, Literal
 from requests_toolbelt.multipart import MultipartEncoder
 from sqlmodel import Session, select
 
-from agent import VoiceTutorAgent, TextTutorAgent
+from agent import VoiceTutorAgent, TextTutorAgent, BaseTutorAgent
 from agent.client import OllamaClient, OpenAiClient, StubClient
 from entity import User, Subject, SubjectLevel, InstructionLanguage, Tutor
 from audio import TextToSpeech
@@ -23,6 +25,7 @@ class TutoringService:
         course_id: int
         text_1: str
         text_2: str
+        mode: str
 
     class AiResponseFragment(BaseModel):
         lang: str
@@ -32,6 +35,20 @@ class TutoringService:
         question: List[TutoringService.AiResponseFragment]
         answer: List[TutoringService.AiResponseFragment]
 
+    class TutorPolicy(BaseModel):
+        response_mode: Literal[
+            "nextQuestion",
+            "correction",
+            "explanation",
+            "repetition",
+            "encouragement"
+        ]
+        target_language: str
+        native_language: str
+        learner_level: str
+        max_sentence_length: int
+        speech_speed: float
+
 
     def __init__(self, session: Session):
         self.session = session
@@ -40,7 +57,8 @@ class TutoringService:
     def askForTextResponse(self, request: AskTutorRequest):
         try:
             subj, level, inst_lang, tutor, ai_request = self._getCourseInfo(request)
-            agent = TextTutorAgent(subject=subj, level=level, tutor=tutor, inst_lang=inst_lang)
+            session_state = self._get_or_create_session_state(user_uuid=request.user_uuid, course_id=request.course_id)
+            agent = TextTutorAgent(subject=subj, level=level, tutor=tutor, inst_lang=inst_lang, mode=request.mode, session_state=session_state)
         
             for chunk in agent.ask_ai_stream(ai_request):
                 yield chunk
@@ -52,7 +70,8 @@ class TutoringService:
     def askForAudioResponse(self, request: "TutoringService.DualLangRequest"):
         try:
             subj, level, inst_lang, tutor, ai_request = self._getCourseInfo(request)
-            agent = VoiceTutorAgent(subject=subj, level=level, tutor=tutor, inst_lang=inst_lang)
+            session_state = self._get_or_create_session_state(user_uuid=request.user_uuid, course_id=request.course_id)
+            agent = VoiceTutorAgent(subject=subj, level=level, tutor=tutor, inst_lang=inst_lang, mode=request.mode, session_state=session_state)
             result = agent.ask_ai(ai_request)
             logger.info(f"AI Answer: {result}")
             ai_result = TutoringService.AiResponse.model_validate_json(result)
@@ -142,3 +161,36 @@ class TutoringService:
                 # For other languages, wrap it in <lang>...</lang> tags
                 result += f"<{fragment.lang}>{fragment.text}</{fragment.lang}>"
         return result
+    
+
+    def _get_or_create_session_state(self, user_uuid: str, course_id: int) -> BaseTutorAgent.TutorSessionState:
+        session_state = self._get_from_dist_memory(key=f"tutor_session:{user_uuid}")
+
+        if session_state == None:
+            session_state_obj = BaseTutorAgent.TutorSessionState(
+                user_uuid=user_uuid,
+                course_id=course_id
+            )
+            self._set_to_dist_memory(key=f"tutor_session:{user_uuid}", value=json.dumps(session_state_obj.model_dump()))
+            return session_state_obj
+        
+        return BaseTutorAgent.TutorSessionState.model_validate_json(session_state)
+    
+
+    def _get_from_dist_memory(self, key: str) -> str | None:
+        host = os.getenv("REDIS_HOST", "localhost")
+        port = int(os.getenv("REDIS_PORT", "6379"))
+        db = int(os.getenv("REDIS_DB", "0"))
+        r = redis.Redis(host=host, port=port, db=db)
+        value = r.get(key)
+        if value:
+            return value.decode('utf-8')
+        return None
+    
+
+    def _set_to_dist_memory(self, key: str, value: str):
+        host = os.getenv("REDIS_HOST", "localhost")
+        port = int(os.getenv("REDIS_PORT", "6379"))
+        db = int(os.getenv("REDIS_DB", "0"))
+        r = redis.Redis(host=host, port=port, db=db)
+        r.set(key, value)
