@@ -1,5 +1,5 @@
 import json
-from typing import List
+from typing import List, Literal
 from pydantic import BaseModel
 from sqlmodel import Session, and_, select
 from fastapi import HTTPException
@@ -8,7 +8,7 @@ from entity import ExerciseSet, ExerciseResult
 from .user_service import UserService
 from .cache_service import CacheService
 from utils import get_app_logger
-from agent import SpeakingLessonAgent
+from agent import SpeakingLessonAgent, ListeningGeneratorAgent
 
 logger = get_app_logger(__name__)
 
@@ -51,6 +51,23 @@ class CourseService:
     class ExerciseResultResponse(BaseModel):
         exercise_set_id: int
         correct_percentage: float
+
+
+    class ListeningGenerateRequest(BaseModel):
+        user_uuid: str
+        topic: str
+        target_language: str       # e.g. "es-MX"
+        actfl_level: str
+
+    class ListeningQuestion(BaseModel):
+        question: str
+        options: list[str]
+        correct_index: int
+
+
+    class ListeningGenerateResponse(BaseModel):
+        passage: str
+        questions: list["ListeningQuestion"]
 
 
     def __init__(self, session: Session):
@@ -301,3 +318,23 @@ class CourseService:
         self.session.commit()
         self.session.refresh(exercise_set)
         return exercise_set
+    
+
+    def generate_listening_lesson(self, request: ListeningGenerateRequest):
+        user = self.user_service.get_user_by_uuid(request.user_uuid)
+        if not user:
+            logger.info(f"Can't find user {request.user_uuid}")
+            raise HTTPException(status_code=400, detail="Bad Request")
+        agent = ListeningGeneratorAgent()
+        prompt = ListeningGeneratorAgent.build_listening_prompt(
+            topic=request.topic,
+            actfl_level=request.actfl_level,
+            target_language=request.target_language
+        )
+        try:
+            response = agent.ask_ai(prompt)
+            data = json.loads(response)
+            return CourseService.ListeningGenerateResponse(**data)
+        except Exception as e:
+            logger.error(f"Error generating listening lesson: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")

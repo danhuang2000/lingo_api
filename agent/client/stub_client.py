@@ -287,12 +287,49 @@ At night it's cold and it can can snow.
 
 """
 
+LISTENING_EXAMPLE = """
+{
+  "passage": "María está en la ciudad y quiere ir al museo. Ella pregunta a un hombre en la calle. El hombre dice que debe caminar dos cuadras y luego girar a la derecha. Después, el museo está cerca del parque. María agradece y empieza a caminar.",
+  "questions": [
+    {
+      "question": "¿Qué quiere hacer María?",
+      "options": [
+        "Ir al museo",
+        "Ir al parque",
+        "Ir a la tienda"
+      ],
+      "correct_index": 0
+    },
+    {
+      "question": "¿Qué le dice el hombre a María?",
+      "options": [
+        "Caminar dos cuadras y girar a la derecha",
+        "Tomar el autobús",
+        "Ir hacia la izquierda"
+      ],
+      "correct_index": 0
+    },
+    {
+      "question": "¿Dónde está el museo?",
+      "options": [
+        "Cerca del parque",
+        "Frente a la tienda",
+        "Al lado de la escuela"
+      ],
+      "correct_index": 0
+    }
+  ]
+}
+"""
+
 class StubClient(AiClient):
     def ask_ai(self, messages: list[BaseMessage]) -> str:
         self._print_messages(messages)
 
         content = messages[0].content
-        if content.find("Spanish") > 0:
+        if messages[1].content.find('Create a short listening comprehension exercise') > 0:
+            return LISTENING_EXAMPLE
+        elif content.find("Spanish") > 0:
             if content.find("from the same audio input") > 0:
                 return AUDI_EXAMPLE_1
             return EXAMPLE_1

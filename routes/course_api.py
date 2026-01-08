@@ -71,3 +71,9 @@ def get_speaking_lesson(request: CourseService.SpeakingLessonRequest, session=De
 def submit_exercise_result(result: CourseService.ExerciseResultRequest, session=Depends(get_session)):
     service = CourseService(session=session)
     return service.submit_exercise_result(result)
+
+
+@router.post("/lesson/listening/generate")
+def generate_listening_lesson(request: CourseService.ListeningGenerateRequest, session=Depends(get_session)):
+    service = CourseService(session=session)
+    return service.generate_listening_lesson(request=request)
