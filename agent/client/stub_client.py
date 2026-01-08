@@ -322,6 +322,14 @@ LISTENING_EXAMPLE = """
 }
 """
 
+WRITING_EXAMPLE = """
+{
+  "prompt_text": "Translate: I want to order a salad and a glass of water.",
+  "correct_translation": "Quiero ordenar una ensalada y un vaso de agua.",
+  "word_bank": ["Quiero", "ordenar", "una", "ensalada", "y", "un", "vaso", "de", "agua", "libro", "correr", "rápido"]
+}
+"""
+
 class StubClient(AiClient):
     def ask_ai(self, messages: list[BaseMessage]) -> str:
         self._print_messages(messages)
@@ -329,6 +337,8 @@ class StubClient(AiClient):
         content = messages[0].content
         if messages[1].content.find('Create a short listening comprehension exercise') > 0:
             return LISTENING_EXAMPLE
+        elif messages[1].content.find('Create a writing (translation-building) exercise') > 0:
+            return WRITING_EXAMPLE
         elif content.find("Spanish") > 0:
             if content.find("from the same audio input") > 0:
                 return AUDI_EXAMPLE_1

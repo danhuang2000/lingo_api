@@ -77,3 +77,9 @@ def submit_exercise_result(result: CourseService.ExerciseResultRequest, session=
 def generate_listening_lesson(request: CourseService.ListeningGenerateRequest, session=Depends(get_session)):
     service = CourseService(session=session)
     return service.generate_listening_lesson(request=request)
+
+
+@router.post("/lesson/writing/generate")
+def generate_writing_lesson(request: CourseService.WritingGenerateRequest, session=Depends(get_session)):
+    service = CourseService(session=session)
+    return service.generate_writing_lesson(request=request)

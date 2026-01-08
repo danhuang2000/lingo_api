@@ -8,7 +8,7 @@ from entity import ExerciseSet, ExerciseResult
 from .user_service import UserService
 from .cache_service import CacheService
 from utils import get_app_logger
-from agent import SpeakingLessonAgent, ListeningGeneratorAgent
+from agent import SpeakingLessonAgent, ListeningGeneratorAgent, WritingGeneratorAgent
 
 logger = get_app_logger(__name__)
 
@@ -68,6 +68,19 @@ class CourseService:
     class ListeningGenerateResponse(BaseModel):
         passage: str
         questions: list["ListeningQuestion"]
+
+
+    class WritingGenerateRequest(BaseModel):
+        user_uuid: str
+        target_language: str      # e.g. "es-MX"
+        learning_language: str    # e.g. "en"
+        topic: str
+        actfl_level: str
+
+    class WritingGenerateResponse(BaseModel):
+        prompt_text: str                 # target language
+        correct_translation: str         # learning language
+        word_bank: list[str]             # shuffled, includes distractors
 
 
     def __init__(self, session: Session):
@@ -337,4 +350,25 @@ class CourseService:
             return CourseService.ListeningGenerateResponse(**data)
         except Exception as e:
             logger.error(f"Error generating listening lesson: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+        
+
+    def generate_writing_lesson(self, request: WritingGenerateRequest):
+        user = self.user_service.get_user_by_uuid(request.user_uuid)
+        if not user:
+            logger.info(f"Can't find user {request.user_uuid}")
+            raise HTTPException(status_code=400, detail="Bad Request")
+        agent = WritingGeneratorAgent()
+        prompt = WritingGeneratorAgent.build_writing_prompt(
+            target_language=request.target_language,
+            instruction_language=request.learning_language,
+            topic=request.topic,
+            actfl_level=request.actfl_level
+        )
+        try:
+            response = agent.ask_ai(prompt)
+            data = json.loads(response)
+            return CourseService.WritingGenerateResponse(**data)
+        except Exception as e:
+            logger.error(f"Error generating writing prompt: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
