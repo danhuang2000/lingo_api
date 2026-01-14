@@ -1,3 +1,4 @@
+import os
 from utils import get_app_logger
 from langchain.schema import BaseMessage
 from .client.ai_client import AiClient
@@ -39,3 +40,8 @@ class BaseAgent:
         logger.debug("AI response streaming...")
         for chunk in self.client.ask_ai_stream(messages):
             yield chunk
+
+    
+    @staticmethod
+    def use_stub_client() -> bool:
+        return os.getenv("USE_STUB_AI", "true").lower() == "true"

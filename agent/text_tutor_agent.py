@@ -1,6 +1,6 @@
 
 from string import Template
-from .base_tutor_agent import BaseTutorAgent
+from .base_tutor_agent import BaseTutorAgent, BaseAgent
 from .client import OpenAiClient, StubClient
 from entity import Subject, SubjectLevel, Tutor, InstructionLanguage
 from utils import get_app_logger
@@ -36,8 +36,8 @@ class TextTutorAgent(BaseTutorAgent):
                 inst_lang: InstructionLanguage,
                 mode: str,
                 session_state: BaseTutorAgent.TutorSessionState):
-        # client = OpenAiClient()
-        client = StubClient()
+
+        client = StubClient() if BaseAgent.use_stub_client() else OpenAiClient()
 
         task_desc = TASK_DESCRIPTION.substitute(desc=tutor.description, lang1=inst_lang.name,
             lang2=subject.name, lang_code_1=inst_lang.code, lang_code_2=subject.code, level_name=level.name)

@@ -22,8 +22,7 @@ Output must be valid JSON.
 
 class ListeningGeneratorAgent(BaseAgent):
     def __init__(self):
-        client = StubClient()
-        # client = OpenAiClient()
+        client = StubClient() if BaseAgent.use_stub_client() else OpenAiClient()
         super().__init__(client=client, instructions=SYSTEM_PROMPT)
  
 

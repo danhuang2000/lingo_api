@@ -54,7 +54,7 @@ class SpeakingLessonAgent(BaseAgent):
         system_message = TUTOR_SYSTEM_MESSAGE.substitute(desc=tutor.description, lang1=inst_lang.name,
             lang2=subject.name, level_name=level.name, level_desc=level.description, count=exercise_count,
             topic=topic, pronunciation=pronunciation, example=lang_example)
-        # client = OpenAiClient()
-        client = StubClient()
+
+        client = StubClient() if BaseAgent.use_stub_client() else OpenAiClient()
         super().__init__(client=client, instructions=system_message)
   

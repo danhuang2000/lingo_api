@@ -1,6 +1,6 @@
 from enum import Enum
 from string import Template
-from .base_tutor_agent import BaseTutorAgent
+from .base_tutor_agent import BaseTutorAgent, BaseAgent
 from .client.openai_client import OpenAiClient
 from .client.stub_client import StubClient
 from utils import get_app_logger
@@ -59,7 +59,6 @@ class VoiceTutorAgent(BaseTutorAgent):
             session=session_state
         )
 
-        # client = OpenAiClient()
-        client = StubClient()
+        client = StubClient() if BaseAgent.use_stub_client() else OpenAiClient()
         super().__init__(client=client, instructions=system_message)
   
