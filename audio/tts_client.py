@@ -15,16 +15,20 @@ class TTSClient:
         logger.debug(f"URL={self.url}")
 
 
-    def post(self, lang: str, gender: str, text: str, speed: int = DEFAULT_SPEED):
+    def post(self, text: str, lang: str = None, gender: str = None, speed: int = DEFAULT_SPEED):
         if lang == "zh":
             lang = "cmn"
         
         payload = {
-            "lang": lang,
-            "gender": gender,
             "speed": speed,
             "text": text
         }
+
+        if lang:
+            payload["lang"] = lang
+        if gender:
+            payload["gender"] = gender
+
         headers = {"Content-Type": "application/json"}
         response = requests.post(self.url, headers=headers, json=payload)
 

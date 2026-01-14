@@ -18,40 +18,56 @@ class TextToSpeech:
         logger.debug(f"synthesizing {text}")
         # Regex to find segments like <es>...</es>
         pattern = re.compile(rf"<{lang_code_2}>(.*?)</{lang_code_2}>", re.DOTALL)
-        segments = []
         last_end = 0
+
+        voice1 = TextToSpeech._espeak_voice(lang_code_1, gender)
+        voice2 = TextToSpeech._espeak_voice(lang_code_2, gender)
+        ssml = []
+        ssml.append('<speak>')
 
         # Find all segments and their languages
         for match in pattern.finditer(text):
             # Text before the tag (lang_code_1)
             if match.start() > last_end:
-                segments.append((text[last_end:match.start()], lang_code_1))
+                text1 = text[last_end:match.start()].strip()
+                ssml.append(f'<voice lang="{voice1}">{text1}</voice>')
             # Text inside the tag (lang_code_2)
-            segments.append((match.group(1), lang_code_2))
+            text2 = match.group(1).strip()
+            ssml.append(f'<voice lang="{voice2}">{text2}</voice>')
             last_end = match.end()
 
         # Any remaining text after the last tag (lang_code_1)
         if last_end < len(text):
-            segments.append((text[last_end:], lang_code_1))
+            text1 = text[last_end:].strip()
+            ssml.append(f'<voice lang="{voice1}">{text1}</voice>')
+
+        ssml.append('</speak>')
+        ssml_text = "".join(ssml)
+        logger.debug(f"SSML generated: {ssml_text}")
 
         # Synthesize each segment and concatenate audio
-        result = []
-        for segment_text, language_code in segments:
-            segment_text = segment_text.strip()
-            if not segment_text:
-                continue
-            
-            phos, audio = TextToSpeech.tts_client.post(
-                lang=language_code,
-                gender="female" if TextToSpeech.GENDER_FEMALE == gender else "male",
-                text=segment_text 
-            )
-            
-            phonemes = json.loads(phos)
-            result.append({"lang": language_code, "audio": audio, "phonemes": phonemes["phonemes"]})
+        phos, audio = TextToSpeech.tts_client.post(text=ssml_text, speed=150)
+        
+        phonemes = json.loads(phos)
+        result = {"audio": audio, "phonemes": phonemes["phonemes"]}
 
         logger.debug(f"Done synthesize: segment count: {len(result)}")
 
         return result
     
+
+    @staticmethod
+    def _espeak_voice(lang: str, gender: int) -> str:
+        buffer = []
+        if lang.startswith("zh"):
+            buffer.append("cmn-latn-pinyin")
+        else:
+            buffer.append(lang)
+        
+        if TextToSpeech.GENDER_FEMALE == gender:
+            buffer.append("+f1")
+        else:
+            buffer.append("+m1")
+
+        return "".join(buffer)
     

@@ -81,7 +81,7 @@ class TutoringService:
             answer = self._convertAiResult(inst_lang_code=inst_lang_code, fragments=ai_result.answer)
 
             # Synthesize audio and phonemes
-            audios = TextToSpeech.synthesize(
+            tts = TextToSpeech.synthesize(
                 text=answer,
                 lang_code_1=inst_lang_code,
                 lang_code_2=subject_lang_code,
@@ -93,12 +93,10 @@ class TutoringService:
                 "question": self._convertAiResult(inst_lang_code=inst_lang_code, fragments=ai_result.question),
                 "answer": (None, answer)
             }
-            for idx, item in enumerate(audios):
-                language_code = item["lang"]
-                idx_lang = f"{idx}_{language_code}"
-                fields[f"phoneme_{idx_lang}"] = (None, json.dumps(item["phonemes"]), "application/json")
-                fields[f"audio_{idx_lang}"] = (f"audio_{idx_lang}.wav", item["audio"], "audio/wav")
-                logger.debug(f"audio multipart {idx_lang}")
+            idx_lang = f"0_{inst_lang_code}"
+            fields[f"phoneme_{idx_lang}"] = (None, json.dumps(tts["phonemes"]), "application/json")
+            fields[f"audio_{idx_lang}"] = (f"audio_{idx_lang}.wav", tts["audio"], "audio/wav")
+            logger.debug(f"audio multipart {idx_lang}")
 
             m = MultipartEncoder(fields=fields)
 
